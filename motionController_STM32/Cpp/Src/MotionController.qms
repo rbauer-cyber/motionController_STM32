@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="7.0.0">
+ <item name="license">GPL</item>
+ <group name="locked"/>
+ <group name="settings">
+  <item name="tabs">1</item>
+  <item name="windows">0</item>
+  <item name="grid">3</item>
+  <item name="backups">0</item>
+ </group>
+ <group name="windows">
+  <item id=".::switch.cpp">0,0,596,300</item>
+  <item id=".::motionMgr.cpp">0,300,596,300</item>
+  <item id=".::../Inc::bsp.hpp">-103,57,761,631</item>
+  <item id=".::motor.cpp">62,388,596,300</item>
+  <item id="AOs::Knob::SM">0,0,658,656</item>
+  <item id="AOs::Motor::SM">0,0,679,670,*</item>
+  <item id="AOs::MotionMgr::SM">0,208,640,480</item>
+  <item id="AOs::Switch::SM">18,0,640,480</item>
+  <item id=".::../Inc::common.hpp">62,0,596,300</item>
+  <item id=".::knob.cpp">0,388,596,300</item>
+  <item id=".::main.cpp">0,15,876,673</item>
+  <item id=".::bsp.cpp">-108,53,766,635</item>
+ </group>
+ <group name="search">
+  <item name="options">2032128</item>
+  <item name="replace">1</item>
+ </group>
+ <group name="vars"/>
+ <group name="tools">
+  <group name="tool">
+   <item name="icon">0</item>
+   <item name="title"></item>
+   <item name="command"></item>
+   <item name="args"></item>
+   <item name="dir"></item>
+   <item name="options">0</item>
+  </group>
+  <group name="tool">
+   <item name="icon">0</item>
+   <item name="title"></item>
+   <item name="command"></item>
+   <item name="args"></item>
+   <item name="dir"></item>
+   <item name="options">0</item>
+  </group>
+  <group name="tool">
+   <item name="icon">0</item>
+   <item name="title"></item>
+   <item name="command"></item>
+   <item name="args"></item>
+   <item name="dir"></item>
+   <item name="options">0</item>
+  </group>
+  <group name="tool">
+   <item name="icon">0</item>
+   <item name="title"></item>
+   <item name="command"></item>
+   <item name="args"></item>
+   <item name="dir"></item>
+   <item name="options">0</item>
+  </group>
+  <group name="tool">
+   <item name="icon">0</item>
+   <item name="title"></item>
+   <item name="command"></item>
+   <item name="args"></item>
+   <item name="dir"></item>
+   <item name="options">0</item>
+  </group>
+ </group>
+</session>

@@ -1,0 +1,1025 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model version="7.0.0" links="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.state-machine.com/qm/qm7.xsd">
+ <documentation>About this example:
+-------------------
+Simple &quot;Blinky&quot; console application for workstations (Windows, Linux, MacOS)
+(see &quot;QM Tutorial&quot; at: https://www.state-machine.com/qm/gs_tut.html)
+
+This example demonstrates:
+- Active object (Blinky) with state machine
+- Board Support Package abstraction for portability
+- BSP implementation for desktop OS (Windows, Linux, MacOS)
+- Platform-independent main() function
+- Makefile to build the generated code on desktop OS (Windows, Linux, MacOS)
+- Customized tools for building the generated code directly from QM
+
+Building the example:
+---------------------
+To build this example, you will need the QP/C framework installed on your
+computer and the GNU-GCC compiler. Both of them will be available if you
+install the QP-bundle from:
+
+https://www.state-machine.com/#Downloads
+
+Running the example:
+--------------------
+This example is a simple console application, which you can run from a terminal.
+
+For more QM examples for QP/C see:
+https://www.state-machine.com/qpc/exa.html</documentation>
+ <!--${qpc}-->
+ <framework name="qpc"/>
+ <!--${Shared}-->
+ <package name="Shared" stereotype="0x02">
+  <!--${Shared::AppSignals}-->
+  <attribute name="AppSignals" type="enum" visibility="0x04" properties="0x00">
+   <code>: QP::QSignal {
+    MOVE_TIME_SIG = QP::Q_USER_SIG,
+    UPDATE_TIME_SIG,
+    MOVE_SIG,
+    FIND_LIMIT_SIG,
+    HOME_SIG,
+    MOVED_SIG,
+    STOP_SIG,
+    MOVE_ERROR_SIG,
+    KNOB_SIG,
+    SWITCH_CHANGED_SIG,
+    SHOW_STATE_SIG
+};</code>
+  </attribute>
+  <!--${Shared::AO_Motor}-->
+  <attribute name="AO_Motor" type="QP::QActive * const" visibility="0x00" properties="0x00">
+   <code>= &amp;Motor::inst;</code>
+  </attribute>
+  <!--${Shared::MoveEvt}-->
+  <class name="MoveEvt" superclass="qpc::QEvt">
+   <!--${Shared::MoveEvt::position}-->
+   <attribute name="position" type="int16_t" visibility="0x00" properties="0x00"/>
+  </class>
+  <!--${Shared::AO_Knob}-->
+  <attribute name="AO_Knob" type="QP::QActive * const" visibility="0x00" properties="0x00">
+   <code>= &amp;Knob::inst;</code>
+  </attribute>
+  <!--${Shared::KnobEvt}-->
+  <class name="KnobEvt" superclass="qpc::QEvt">
+   <!--${Shared::KnobEvt::position}-->
+   <attribute name="position" type="int8_t" visibility="0x00" properties="0x00"/>
+  </class>
+  <!--${Shared::MovedEvt}-->
+  <class name="MovedEvt" superclass="qpc::QEvt">
+   <!--${Shared::MovedEvt::position}-->
+   <attribute name="position" type="int16_t" visibility="0x00" properties="0x00"/>
+  </class>
+  <!--${Shared::AO_MotionMgr}-->
+  <attribute name="AO_MotionMgr" type="QP::QActive * const" visibility="0x00" properties="0x00">
+   <code>= &amp;MotionMgr::inst;</code>
+  </attribute>
+  <!--${Shared::SwitchEvt}-->
+  <class name="SwitchEvt" superclass="qpc::QEvt">
+   <!--${Shared::SwitchEvt::state}-->
+   <attribute name="state" type="uint8_t" visibility="0x00" properties="0x00"/>
+  </class>
+  <!--${Shared::AO_Switch}-->
+  <attribute name="AO_Switch" type="QP::QActive * const" visibility="0x00" properties="0x00">
+   <code>= &amp;Switch::inst;</code>
+  </attribute>
+  <!--${Shared::AppError}-->
+  <attribute name="AppError" type="enum" visibility="0x04" properties="0x00">
+   <code>: QP::QSignal {
+    ERROR_NONE = QP::Q_USER_SIG,
+    ERROR_LIMIT_SWITCH,
+    ERROR_STOP,
+    ERROR_TIME_OUT
+};</code>
+  </attribute>
+  <!--${Shared::MoveErrorEvt}-->
+  <class name="MoveErrorEvt" superclass="qpc::QEvt">
+   <!--${Shared::MoveErrorEvt::error}-->
+   <attribute name="error" type="uint8_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::MoveErrorEvt::position}-->
+   <attribute name="position" type="int16_t" visibility="0x00" properties="0x00"/>
+  </class>
+ </package>
+ <!--${AOs}-->
+ <package name="AOs" stereotype="0x02">
+  <!--${AOs::Motor}-->
+  <class name="Motor" superclass="qpc::QActive">
+   <!--${AOs::Motor::m_timeEvt}-->
+   <attribute name="m_timeEvt" type="QP::QTimeEvt" visibility="0x02" properties="0x00"/>
+   <!--${AOs::Motor::inst}-->
+   <attribute name="inst" type="Motor" visibility="0x00" properties="0x01"/>
+   <!--${AOs::Motor::m_position}-->
+   <attribute name="m_position" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Motor::m_moving}-->
+   <attribute name="m_moving" type="std::int8_t" visibility="0x02" properties="0x00"/>
+   <!--${AOs::Motor::m_positionRequest}-->
+   <attribute name="m_positionRequest" type="std::int16_t" visibility="0x02" properties="0x00"/>
+   <!--${AOs::Motor::m_increment}-->
+   <attribute name="m_increment" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Motor::m_stepDelay}-->
+   <attribute name="m_stepDelay" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Motor::m_atLimitSwitch}-->
+   <attribute name="m_atLimitSwitch" type="std::uint8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Motor::m_findingLimit}-->
+   <attribute name="m_findingLimit" type="std::uint8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Motor::m_error}-->
+   <attribute name="m_error" type="std::uint8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Motor::AO_Client}-->
+   <attribute name="AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Motor::MotionDone}-->
+   <operation name="MotionDone" type="std::int8_t" visibility="0x02" properties="0x00">
+    <code>return m_position == m_positionRequest;</code>
+   </operation>
+   <!--${AOs::Motor::MoveMotor}-->
+   <operation name="MoveMotor" type="std::int16_t" visibility="0x02" properties="0x00">
+    <code>/////////////////
+// Note!!
+// If the stepper motor is running continuously for multiple steps,
+// it prevents the timer event loop from processing events;
+// consequently the timer events must be paused if the stepper runs
+// multiple steps or else the event queue is overloaded.
+// The timer can remain enabled if the foreground code runs
+// one step at a time; consequently this method moves only one
+// step at a time.
+/////////////////
+// Only one step at a time now.
+int16_t increment = (m_positionRequest &gt;= m_position) ? 1 : -1;
+m_position = BSP_MoveMotor(increment);
+return m_position;</code>
+   </operation>
+   <!--${AOs::Motor::CreateOneShotTimer}-->
+   <operation name="CreateOneShotTimer" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::Motor::CreateOneShotTim~::time}-->
+    <parameter name="time" type="uint32_t"/>
+    <code>// Create one shot timer
+QTimeEvt_ctorX(&amp;me-&gt;timeEvt, &amp;me-&gt;super, MOVE_TIME_SIG, 0U);
+QTimeEvt_armX(&amp;me-&gt;timeEvt, time, 0);</code>
+   </operation>
+   <!--${AOs::Motor::SendMotionDoneEvent}-->
+   <operation name="SendMotionDoneEvent" type="void" visibility="0x02" properties="0x00">
+    <code>// Notify client motion done
+MovedEvt *myEvt = Q_NEW(MovedEvt, MOVED_SIG);
+myEvt-&gt;position = me-&gt;position;
+//QACTIVE_POST(AO_MotionMgr, (QEvt*)myEvt, &amp;me-&gt;super);
+QACTIVE_POST(me-&gt;AO_Client, (QEvt*)myEvt, &amp;me-&gt;super);</code>
+   </operation>
+   <!--${AOs::Motor::SendMotionErrorEvent}-->
+   <operation name="SendMotionErrorEvent" type="void" visibility="0x02" properties="0x00">
+    <code>// Notify client motion done
+MoveErrorEvt *myEvt = Q_NEW(MoveErrorEvt, MOVE_ERROR_SIG);
+myEvt-&gt;position = me-&gt;position;
+myEvt-&gt;error = me-&gt;error;
+//QACTIVE_POST(AO_MotionMgr, (QEvt*)myEvt, &amp;me-&gt;super);
+QACTIVE_POST(me-&gt;AO_Client, (QEvt*)myEvt, &amp;me-&gt;super);</code>
+   </operation>
+   <!--${AOs::Motor::Motor}-->
+   <operation name="Motor" type="" visibility="0x00" properties="0x00">
+    <code>  : QActive(Q_STATE_CAST(&amp;initial))
+    m_timeEvt(this, TIMEOUT_SIG, 0U)
+
+m_stepDelay = BSP_getMotorStepDelay();
+m_positionRequest = 0;
+m_increment = 0;
+m_position = 0;
+m_atLimitSwitch = 0;
+m_findingLimit = 0;
+m_moving = 0;</code>
+   </operation>
+   <!--${AOs::Motor::SM}-->
+   <statechart properties="0x01">
+    <documentation>Motor state machine</documentation>
+    <!--${AOs::Motor::SM::initial}-->
+    <initial target="../1">
+     <action>me-&gt;AO_Client = (QActive *const) par;</action>
+     <initial_glyph color="3" conn="17,2,5,0,24,4">
+      <action box="1,0,9,2"/>
+     </initial_glyph>
+    </initial>
+    <!--${AOs::Motor::SM::MotionReady}-->
+    <state name="MotionReady">
+     <!--${AOs::Motor::SM::MotionReady::initial}-->
+     <initial target="../4">
+      <action>consoleDisplay(&quot;Motor: starting&quot;);
+me-&gt;atLimitSwitch = 0;</action>
+      <initial_glyph color="3" conn="11,12,5,0,23,5">
+       <action box="2,-2,6,2"/>
+      </initial_glyph>
+     </initial>
+     <!--${AOs::Motor::SM::MotionReady::SWITCH_CHANGED}-->
+     <tran trig="SWITCH_CHANGED">
+      <action brief="UpdateLimitSwitchState">uint8_t switchState = Q_EVT_CAST(SwitchEvt)-&gt;state;
+
+if ( switchState == 0 ) {
+    if ( me-&gt;increment &lt; 0 &amp;&amp; me-&gt;atLimitSwitch == 0 ) {
+        consoleDisplay(&quot;Motor: limit switch closed&quot;);
+    }
+    me-&gt;atLimitSwitch = 1;
+}
+else if ( switchState == 1 ) {
+    me-&gt;atLimitSwitch = 0;
+}</action>
+      <tran_glyph conn="67,13,1,-1,-19">
+       <action box="-18,-4,18,4"/>
+      </tran_glyph>
+     </tran>
+     <!--${AOs::Motor::SM::MotionReady::SHOW_STATE}-->
+     <tran trig="SHOW_STATE">
+      <action>consoleDisplayArgs(&quot;Motor: position: %d, moving: %d, limit: %d&quot;,
+    me-&gt;position, me-&gt;moving, me-&gt;atLimitSwitch);</action>
+      <tran_glyph conn="67,38,1,-1,-10">
+       <action box="-13,-3,12,2"/>
+      </tran_glyph>
+     </tran>
+     <!--${AOs::Motor::SM::MotionReady::Moving}-->
+     <state name="Moving">
+      <entry brief="Start Moving">//consoleDisplay(&quot;Motor: moving&quot;);
+m_moving = 1;
+uint32_t moveTime = 15;
+Motor_CreateOneShotTimer(me, moveTime);</entry>
+      <exit>//consoleDisplay(&quot;Motor: not moving&quot;);</exit>
+      <!--${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME}-->
+      <tran trig="MOVE_TIME">
+       <action brief="MoveMotor">//consoleDisplay(&quot;Motor: move motor&quot;);
+Motor_MoveMotor(me);</action>
+       <!--${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[MotionDone]}-->
+       <choice target="../../../4">
+        <guard brief="MotionDone">Motor_MotionDone(me)</guard>
+        <action>// Notify client motion done
+Motor_SendMotionDoneEvent(me);</action>
+        <choice_glyph conn="29,56,5,2,11,-26">
+         <action box="1,0,10,2"/>
+        </choice_glyph>
+       </choice>
+       <!--${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[else]}-->
+       <choice>
+        <guard>else</guard>
+        <!--${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[else]::[AtLimitSwitch]}-->
+        <choice target="../../../../4">
+         <guard brief="At Limit Switch">m_atLimitSwitch == 1</guard>
+         <action>consoleDisplay(&quot;Motor: stopped by limit switch&quot;);
+
+if (m_findingLimit) {
+    consoleDisplay(&quot;Motor: found switch, setting home position&quot;);
+    m_position = 0;
+}
+else {
+    m_error = ERROR_LIMIT_SWITCH;
+}</action>
+         <choice_glyph conn="38,63,5,2,13,-33">
+          <action box="2,1,14,2"/>
+         </choice_glyph>
+        </choice>
+        <!--${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[else]::[else]}-->
+        <choice target="../../..">
+         <guard>else</guard>
+         <choice_glyph conn="38,63,4,2,9">
+          <action box="-5,2,10,2"/>
+         </choice_glyph>
+        </choice>
+        <choice_glyph conn="29,56,4,-1,7,9">
+         <action box="-5,2,6,2"/>
+        </choice_glyph>
+       </choice>
+       <tran_glyph conn="15,56,3,-1,14">
+        <action box="0,-2,12,4"/>
+       </tran_glyph>
+      </tran>
+      <!--${AOs::Motor::SM::MotionReady::Moving::STOP}-->
+      <tran trig="STOP" target="../../4">
+       <action>m_error = ERROR_STOP;</action>
+       <tran_glyph conn="45,46,0,2,-16">
+        <action box="-1,-5,10,2"/>
+       </tran_glyph>
+      </tran>
+      <state_glyph node="15,46,42,26">
+       <entry box="0,3,14,2"/>
+       <exit box="0,5,6,2"/>
+      </state_glyph>
+     </state>
+     <!--${AOs::Motor::SM::MotionReady::Stopped}-->
+     <state name="Stopped">
+      <entry brief="Notify Client">if ( m_moving ) {
+    consoleDisplayArgs(&quot;Motor: stopped, position = %d&quot;, m_position);
+
+    if (m_position == m_positionRequest)
+    {
+        Motor_SendMotionDoneEvent(me);
+    }
+    else
+    {
+        Motor_SendMotionErrorEvent(me);
+    }
+
+    m_findingLimit = 0;
+    m_moving = 0;
+}</entry>
+      <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT}-->
+      <tran trig="MOVE, FIND_LIMIT">
+       <action>int16_t newPosition = Q_EVT_CAST(MoveEvt)-&gt;position;
+m_positionRequest = newPosition;
+m_increment = m_positionRequest - m_position;
+m_error = ERROR_NONE;
+
+if ( Q_EVT_CAST(MoveEvt)-&gt;super.sig == FIND_LIMIT_SIG ) {
+    consoleDisplay(&quot;Motor: finding limit&quot;);
+    m_findingLimit = 1;
+}
+
+consoleDisplayArgs(&quot;Motor: requested position = %d, position = %d&quot;,
+    newPosition, m_position);</action>
+       <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[NewPosition]}-->
+       <choice target="../../../3">
+        <guard brief="NewPosition">m_positionRequest != m_position</guard>
+        <action>consoleDisplayArgs(&quot;Motor: moving, increment: %d&quot;, m_increment);</action>
+        <choice_glyph conn="21,38,4,0,8">
+         <action box="1,3,14,2"/>
+        </choice_glyph>
+       </choice>
+       <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[AtPositionOrAtLimit]}-->
+       <choice target="../..">
+        <guard brief="AtPositionOrAtLimit">(m_positionRequest == m_position) ||
+(m_increment &lt; 0 &amp;&amp; m_atLimitSwitch)</guard>
+        <action>if ( m_atLimitSwitch ) {
+    consoleDisplay(&quot;Motor: no move, at limit switch&quot;);
+}
+else {
+    consoleDisplay(&quot;Motor: no move, already at position&quot;);
+}</action>
+        <choice_glyph conn="21,38,5,2,12,-8">
+         <action box="0,-3,17,2"/>
+        </choice_glyph>
+       </choice>
+       <tran_glyph conn="21,30,2,-1,8">
+        <action box="-5,1,17,2"/>
+       </tran_glyph>
+      </tran>
+      <state_glyph color="2" node="16,17,41,13">
+       <entry box="0,3,18,2"/>
+      </state_glyph>
+     </state>
+     <state_glyph node="5,6,62,71"/>
+    </state>
+    <state_diagram size="119,82"/>
+   </statechart>
+  </class>
+  <!--${AOs::MotionMgr}-->
+  <class name="MotionMgr" superclass="qpc::QActive">
+   <!--${AOs::MotionMgr::inst}-->
+   <attribute name="inst" type="MotionMgr" visibility="0x00" properties="0x01"/>
+   <!--${AOs::MotionMgr::m_requestPosition}-->
+   <attribute name="m_requestPosition" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::MotionMgr::m_currentPosition}-->
+   <attribute name="m_currentPosition" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::MotionMgr::m_motorIncrement}-->
+   <attribute name="m_motorIncrement" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::MotionMgr::m_knobPosition}-->
+   <attribute name="m_knobPosition" type="std::int8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::MotionMgr::SendMoveEvent}-->
+   <operation name="SendMoveEvent" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::MotionMgr::SendMoveEvent::position}-->
+    <parameter name="position" type="uint16_t"/>
+    <code>// Request new motor postiion
+MoveEvt *myEvt = Q_NEW(MoveEvt, MOVE_SIG);
+myEvt-&gt;position = position;
+QACTIVE_POST(AO_Motor, (QEvt*)myEvt, &amp;me-&gt;super);</code>
+   </operation>
+   <!--${AOs::MotionMgr::SendFindLimitEvent}-->
+   <operation name="SendFindLimitEvent" type="void" visibility="0x02" properties="0x00">
+    <code>// Request new motor postiion
+MoveEvt *myEvt = Q_NEW(MoveEvt, FIND_LIMIT_SIG);
+myEvt-&gt;position = -4000;
+QACTIVE_POST(AO_Motor, (QEvt*)myEvt, &amp;me-&gt;super);</code>
+   </operation>
+   <!--${AOs::MotionMgr::MotionMgr}-->
+   <operation name="MotionMgr" type="" visibility="0x00" properties="0x00">
+    <code>  : QActive(Q_STATE_CAST(&amp;initial))
+
+m_requestPosition = 0;
+m_currentPosition = 0;
+m_motorIncrement = 400;
+m_knobPosition = 0;</code>
+   </operation>
+   <!--${AOs::MotionMgr::SM}-->
+   <statechart properties="0x01">
+    <documentation>MotionMgr state machine</documentation>
+    <!--${AOs::MotionMgr::SM::initial}-->
+    <initial target="../1">
+     <action>(void)par; // unused parameter
+consoleDisplay(&quot;MotionMgr: starting&quot;);</action>
+     <initial_glyph color="3" conn="26,4,4,0,9">
+      <action box="0,-2,6,2"/>
+     </initial_glyph>
+    </initial>
+    <!--${AOs::MotionMgr::SM::idle}-->
+    <state name="idle">
+     <entry>consoleDisplay(&quot;MotionMgr: idle&quot;);</entry>
+     <!--${AOs::MotionMgr::SM::idle::KNOB}-->
+     <tran trig="KNOB">
+      <action>// Received event for knob position
+// Increment motor position by motorIncrement attr for each knob position.
+int8_t knobPosition = Q_EVT_CAST(KnobEvt)-&gt;position;</action>
+      <!--${AOs::MotionMgr::SM::idle::KNOB::[KnobChanged]}-->
+      <choice target="../../../2">
+       <guard brief="Knob Changed">knobPosition != m_knobPosition</guard>
+       <action>// Knob position changed, determine new motor position
+int knobIncrement = knobPosition - m_knobPosition;
+int positionIncrement = knobIncrement * m_motorIncrement;
+int newPosition = m_currentPosition + positionIncrement;
+
+m_requestPosition = newPosition;
+consoleDisplayArgs(&quot;MotionMgr: knob position = %d&quot;, knobPosition);
+consoleDisplayArgs(&quot;MotionMgr: requested motor position = %d&quot;, newPosition);
+m_knobPosition = knobPosition;
+
+MotionMgr_SendMoveEvent(me, newPosition);</action>
+       <choice_glyph color="1" conn="12,33,4,0,8">
+        <action box="-4,3,15,2"/>
+       </choice_glyph>
+      </choice>
+      <tran_glyph color="1" conn="12,25,2,-1,8">
+       <action box="0,1,8,2"/>
+      </tran_glyph>
+     </tran>
+     <!--${AOs::MotionMgr::SM::idle::HOME}-->
+     <tran trig="HOME" target="../../2">
+      <action>// Send HOME event to initialize system
+consoleDisplay(&quot;MotionMgr: homing motor&quot;);
+MotionMgr_SendFindLimitEvent(me);</action>
+      <tran_glyph color="1" conn="24,25,2,0,16">
+       <action box="0,6,7,2"/>
+      </tran_glyph>
+     </tran>
+     <state_glyph node="6,13,40,12">
+      <entry box="0,3,6,2"/>
+     </state_glyph>
+    </state>
+    <!--${AOs::MotionMgr::SM::moving}-->
+    <state name="moving">
+     <!--${AOs::MotionMgr::SM::moving::MOVED}-->
+     <tran trig="MOVED" target="../../1">
+      <action>// Received event from motor
+int16_t position = Q_EVT_CAST(MovedEvt)-&gt;position;
+m_currentPosition = position;
+consoleDisplayArgs(&quot;MotionMgr: motor position = %d&quot;, position);</action>
+      <tran_glyph color="1" conn="33,41,0,2,-16">
+       <action box="0,-5,8,2"/>
+      </tran_glyph>
+     </tran>
+     <!--${AOs::MotionMgr::SM::moving::MOVE_ERROR}-->
+     <tran trig="MOVE_ERROR" target="../../1">
+      <action>// Received event from motor
+int16_t position = Q_EVT_CAST(MoveErrorEvt)-&gt;error;
+uint8_t error = Q_EVT_CAST(MoveErrorEvt)-&gt;error;
+m_currentPosition = position;
+consoleDisplayArgs(&quot;MotionMgr: motor position = %d, error = %d&quot;,
+                    position, error);</action>
+      <tran_glyph conn="42,41,0,2,-16">
+       <action box="0,-7,14,2"/>
+      </tran_glyph>
+     </tran>
+     <state_glyph color="2" node="6,41,40,13"/>
+    </state>
+    <state_diagram size="62,57"/>
+   </statechart>
+  </class>
+  <!--${AOs::Knob}-->
+  <class name="Knob" superclass="qpc::QActive">
+   <!--${AOs::Knob::inst}-->
+   <attribute name="inst" type="Knob" visibility="0x00" properties="0x01"/>
+   <!--${AOs::Knob::m_position}-->
+   <attribute name="m_position" type="std::int8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Knob::m_timeEvt}-->
+   <attribute name="m_timeEvt" type="QTimeEvt" visibility="0x02" properties="0x00"/>
+   <!--${AOs::Knob::m_notifyCount}-->
+   <attribute name="m_notifyCount" type="std::uint16_t" visibility="0x00" properties="0x00">
+    <code>= 0;</code>
+   </attribute>
+   <!--${AOs::Knob::m_lastPosition}-->
+   <attribute name="m_lastPosition" type="std::int8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Knob::AO_Client}-->
+   <attribute name="AO_Client" type="QActive *" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Knob::CreatePeriodicTimer}-->
+   <operation name="CreatePeriodicTimer" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::Knob::CreatePeriodicTi~::time}-->
+    <parameter name="time" type="uint32_t"/>
+    <code>QTimeEvt_ctorX(&amp;m_timeEvt, &amp;m_super, UPDATE_TIME_SIG, 0U);
+QTimeEvt_armX(&amp;m_timeEvt, time, time);</code>
+   </operation>
+   <!--${AOs::Knob::SendKnobEvent}-->
+   <operation name="SendKnobEvent" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::Knob::SendKnobEvent::position}-->
+    <parameter name="position" type="uint16_t"/>
+    <code>// Send new knob postiion
+KnobEvt *pEvt = Q_NEW(KnobEvt, KNOB_SIG);
+pEvt-&gt;position = position;
+QACTIVE_POST(m_AO_Client, (QEvt*)pEvt, &amp;m_super);</code>
+   </operation>
+   <!--${AOs::Knob::CheckKnobChanged}-->
+   <operation name="CheckKnobChanged" type="uint8_t" visibility="0x02" properties="0x00">
+    <code>uint8_t knobChanged = 0;
+
+// Test for knob position changed
+if ( m_position != m_lastPosition )
+{
+    m_lastPosition = m_position;
+    consoleDisplayArgs(&quot;Knob: notify, new position = %d&quot;, m_position);
+    knobChanged = 1;
+}
+
+return knobChanged;</code>
+   </operation>
+   <!--${AOs::Knob::Knob}-->
+   <operation name="Knob" type="" visibility="0x00" properties="0x00">
+    <code>  : QActive(Q_STATE_CAST(&amp;initial))
+    m_timeEvt(this, TIMEOUT_SIG, 0U)
+
+m_position = 0;
+m_lastPosition = 0;
+m_notifyCount = 0;</code>
+   </operation>
+   <!--${AOs::Knob::SM}-->
+   <statechart properties="0x01">
+    <documentation>Knob state machine</documentation>
+    <!--${AOs::Knob::SM::initial}-->
+    <initial target="../1/1">
+     <action>// Start periodic time to read knob position
+m_AO_Client = (QActive *const) par;
+consoleDisplay(&quot;Knob: starting&quot;);
+Knob_CreatePeriodicTimer(me, 1000);</action>
+     <initial_glyph color="3" conn="23,3,4,0,10">
+      <action box="0,-2,6,2"/>
+     </initial_glyph>
+    </initial>
+    <!--${AOs::Knob::SM::running}-->
+    <state name="running">
+     <!--${AOs::Knob::SM::running::KNOB}-->
+     <tran trig="KNOB">
+      <action brief="KNOB CHANGED">// Received event for knob position from test
+// Increment motor position by motorIncrement attr for each knob position.
+int8_t knobPosition = Q_EVT_CAST(KnobEvt)-&gt;position;
+m_position = knobPosition;
+BSP_setPositionKnob(knobPosition);</action>
+      <tran_glyph color="1" conn="45,7,0,-1,13">
+       <action box="-4,6,12,4"/>
+      </tran_glyph>
+     </tran>
+     <!--${AOs::Knob::SM::running::idle}-->
+     <state name="idle">
+      <entry brief="Notify Client">if ( m_notifyCount &gt;= 1 )
+{
+    Knob_CheckKnobChanged(me);
+    // Always update client with knob position
+    Knob_SendKnobEvent(me, m_position);
+    m_notifyCount = 0;
+}</entry>
+      <!--${AOs::Knob::SM::running::idle::UPDATE_TIME}-->
+      <tran trig="UPDATE_TIME" target="../../2">
+       <tran_glyph color="1" conn="17,25,2,0,8">
+        <action box="0,1,13,2"/>
+       </tran_glyph>
+      </tran>
+      <state_glyph node="13,13,25,12">
+       <entry box="0,3,13,2"/>
+      </state_glyph>
+     </state>
+     <!--${AOs::Knob::SM::running::updatePosition}-->
+     <state name="updatePosition">
+      <entry brief="Read Position">m_position = BSP_readKnob();
+m_notifyCount += 1;</entry>
+      <!--${AOs::Knob::SM::running::updatePosition::UPDATE_TIME}-->
+      <tran trig="UPDATE_TIME" target="../../1">
+       <tran_glyph color="1" conn="33,33,0,2,-8">
+        <action box="1,-3,13,2"/>
+       </tran_glyph>
+      </tran>
+      <state_glyph color="2" node="13,33,25,13">
+       <entry box="0,3,16,2"/>
+      </state_glyph>
+     </state>
+     <state_glyph node="6,7,47,43"/>
+    </state>
+    <state_diagram size="63,56"/>
+   </statechart>
+  </class>
+  <!--${AOs::Switch}-->
+  <class name="Switch" superclass="qpc::QActive">
+   <!--${AOs::Switch::inst}-->
+   <attribute name="inst" type="Switch" visibility="0x00" properties="0x01"/>
+   <!--${AOs::Switch::m_state}-->
+   <attribute name="m_state" type="std::uint8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Switch::m_timeEvt}-->
+   <attribute name="m_timeEvt" type="QP::QTimeEvt" visibility="0x02" properties="0x00"/>
+   <!--${AOs::Switch::m_notifyCount}-->
+   <attribute name="m_notifyCount" type="std::uint16_t" visibility="0x00" properties="0x00">
+    <code>= 0;</code>
+   </attribute>
+   <!--${AOs::Switch::m_lastState}-->
+   <attribute name="m_lastState" type="std::uint8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Switch::AO_Client}-->
+   <attribute name="AO_Client" type="QActive *" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Switch::CreatePeriodicTimer}-->
+   <operation name="CreatePeriodicTimer" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::Switch::CreatePeriodicTi~::time}-->
+    <parameter name="time" type="uint32_t"/>
+    <code>QTimeEvt_ctorX(&amp;m_timeEvt, &amp;m_super, UPDATE_TIME_SIG, 0U);
+QTimeEvt_armX(&amp;m_timeEvt, time, time);</code>
+   </operation>
+   <!--${AOs::Switch::SendSwitchEvent}-->
+   <operation name="SendSwitchEvent" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::Switch::SendSwitchEvent::state}-->
+    <parameter name="state" type="uint8_t"/>
+    <code>// Send new switch postiion
+SwitchEvt *pEvt = Q_NEW(SwitchEvt, SWITCH_CHANGED_SIG);
+pEvt-&gt;state = state;
+QACTIVE_POST(m_AO_Client, (QEvt*)pEvt, &amp;m_super);</code>
+   </operation>
+   <!--${AOs::Switch::CheckSwitchChanged}-->
+   <operation name="CheckSwitchChanged" type="std::uint8_t" visibility="0x02" properties="0x00">
+    <code>uint8_t switchState = BSP_readSwitch();
+uint8_t switchChanged = 0;
+
+// Check for switch debounce, if recorded state the same,
+// then stable read, otherwise preserve from last reading.
+// Update time between readings provides debounce
+if ( m_state == switchState )
+{
+    // Test for switich state changed
+    if ( m_state != m_lastState )
+    {
+        m_lastState = m_state;
+        consoleDisplayArgs(&quot;Switch: notify, new state = %d&quot;, m_state);
+        switchChanged = 1;
+    }
+}
+else
+{
+    m_state != m_lastState;
+}
+
+return switchChanged;</code>
+   </operation>
+   <!--${AOs::Switch::Switch}-->
+   <operation name="Switch" type="" visibility="0x00" properties="0x00">
+    <code>  : QActive(Q_STATE_CAST(&amp;initial))
+    m_timeEvt(this, TIMEOUT_SIG, 0U)
+
+m_state = 1;
+m_lastState = 1;
+m_notifyCount = 0;</code>
+   </operation>
+   <!--${AOs::Switch::SM}-->
+   <statechart properties="0x01">
+    <documentation>Mechanical/Optical Switch state machine</documentation>
+    <!--${AOs::Switch::SM::initial}-->
+    <initial target="../1">
+     <action>// Start periodic time to read switch position
+m_AO_Client = (QActive *const) par;
+consoleDisplay(&quot;Switch: starting&quot;);
+Switch_CreatePeriodicTimer(me, 1000);</action>
+     <initial_glyph color="3" conn="17,4,4,0,8">
+      <action box="0,-2,6,2"/>
+     </initial_glyph>
+    </initial>
+    <!--${AOs::Switch::SM::updateSwitchState}-->
+    <state name="updateSwitchState">
+     <entry brief="Debouce, Update, Notify">if ( m_notifyCount &gt;= 1 )
+{
+    Switch_CheckSwitchChanged(me);
+    // Always update client with switch state
+    Switch_SendSwitchEvent(me, m_state);
+    m_notifyCount = 0;
+}</entry>
+     <!--${AOs::Switch::SM::updateSwitchStat~::UPDATE_TIME}-->
+     <tran trig="UPDATE_TIME" target="../../2">
+      <tran_glyph color="1" conn="11,24,2,0,11">
+       <action box="0,1,13,2"/>
+      </tran_glyph>
+     </tran>
+     <state_glyph node="7,12,22,12">
+      <entry box="0,3,22,2"/>
+     </state_glyph>
+    </state>
+    <!--${AOs::Switch::SM::readSwitch}-->
+    <state name="readSwitch">
+     <entry brief="Read Switch State">// Read and store state of switch for debouncing in Idle.
+m_state = BSP_readSwitch();
+m_notifyCount += 1;</entry>
+     <!--${AOs::Switch::SM::readSwitch::UPDATE_TIME}-->
+     <tran trig="UPDATE_TIME" target="../../1">
+      <tran_glyph color="1" conn="24,35,0,2,-11">
+       <action box="0,-3,13,2"/>
+      </tran_glyph>
+     </tran>
+     <state_glyph color="2" node="7,35,22,13">
+      <entry box="0,3,18,2"/>
+     </state_glyph>
+    </state>
+    <state_diagram size="45,52"/>
+   </statechart>
+  </class>
+ </package>
+ <!--${.}-->
+ <directory name=".">
+  <!--${.::../Inc}-->
+  <directory name="../Inc">
+   <!--${.::../Inc::bsp.hpp}-->
+   <file name="bsp.hpp">
+    <text>#ifndef BSP_H_
+#define BSP_H_
+
+#define BSP_TICKS_PER_SEC    10000000U
+#define USE_DYNAMIC
+
+void BSP_init(void);
+void BSP_start(void);
+void BSP_pauseTimer(void);
+void BSP_resumeTimer(void);
+
+#endif // BSP_H_</text>
+   </file>
+   <!--${.::../Inc::common.hpp}-->
+   <file name="common.hpp">
+    <text>#ifndef COMMON_H
+#define COMMON_H
+
+$declare ${Shared}
+
+#endif //COMMON_H</text>
+   </file>
+  </directory>
+  <!--${.::bsp.cpp}-->
+  <file name="bsp.cpp">
+   <text>// Board Support Package implementation for desktop OS (Windows, Linux, MacOS)
+#include &quot;qpc.hpp&quot;    // QP/C real-time embedded framework
+#include &quot;common.hpp&quot;
+#include &quot;console.hpp&quot;
+#include &quot;bsp.hpp&quot;    // Board Support Package interface
+#include &quot;motion.hpp&quot;
+
+#define TIMER_ONE_ISR
+#define TIMER_SCALAR 1
+#define KNOB_MAX 20
+
+static uint8_t s_timerPaused = 0;
+
+// mutable event with parameters
+static MoveEvt findLimitEvt = {
+    QEVT_INITIALIZER(FIND_LIMIT_SIG),
+    .position = -4000
+};
+
+static MoveEvt moveEvt = {
+    QEVT_INITIALIZER(MOVE_SIG),
+    .position = 1000
+};
+
+static int8_t s_knobIncrement = 1;
+
+static KnobEvt knobEvt = {
+    QEVT_INITIALIZER(KNOB_SIG),
+    .position = 2
+};
+
+static void rotateKnobPositionCW()
+{
+    knobEvt.position += s_knobIncrement;
+}
+
+static void rotateKnobPositionCCW()
+{
+    knobEvt.position -= s_knobIncrement;
+}
+
+static QEvt const showStateEvt = QEVT_INITIALIZER(SHOW_STATE_SIG);
+static QEvt const stopEvt = QEVT_INITIALIZER(STOP_SIG);
+static QEvt const findHomeEvt = QEVT_INITIALIZER(HOME_SIG);
+
+void BSP_dispatchUserCommand()
+{
+    // Read the incoming byte
+    // Notify App if ped event selected.
+    switch ( consoleReadByte() ) {
+        case 'f':
+        case 'F':
+            QACTIVE_POST_LIFO(AO_MotionMgr, (QEvt*)&amp;findLimitEvt);
+            break;
+        case 'h':
+        case 'H':
+            QACTIVE_POST_LIFO(AO_MotionMgr, (QEvt*)&amp;findHomeEvt);
+            break;
+        case 'm':
+        case 'M':
+            QACTIVE_POST_LIFO(AO_Motor, (QEvt*)&amp;moveEvt);
+            break;
+        case 'k':
+        case 'K':
+            rotateKnobPositionCW();
+            QACTIVE_POST_LIFO(AO_Knob, (QEvt*)&amp;knobEvt);
+            break;
+        case 'j':
+        case 'J':
+            rotateKnobPositionCCW();
+            QACTIVE_POST_LIFO(AO_Knob, (QEvt*)&amp;knobEvt);
+            break;
+        case 's':
+        case 'S':
+            QACTIVE_POST_LIFO(AO_Motor, (QEvt*)&amp;stopEvt);
+            break;
+        case 'u':
+        case 'U':
+            QACTIVE_POST_LIFO(AO_Motor, (QEvt*)&amp;showStateEvt);
+            break;
+        case '+':
+            moveEvt.position += 1000;
+            QACTIVE_POST_LIFO(AO_Motor, (QEvt*)&amp;moveEvt);
+            break;
+        case '-':
+            moveEvt.position -= 1000;
+            QACTIVE_POST_LIFO(AO_Motor, (QEvt*)&amp;moveEvt);
+            break;
+    }
+}
+
+void BSP_notifyTimerEvent(void)
+{
+    if ( !s_timerPaused )
+    {
+        QTIMEEVT_TICK_X(0U, (void *)0);  // clock tick processing
+    }
+
+    if ( consoleInputReady() ) {
+        BSP_dispatchUserCommand();
+    }
+}
+
+void QV_onIdle(void) {
+    // Called with interrupts DISABLED
+    // Put the CPU and peripherals to the low-power mode. You might
+    // need to customize the clock management for your application,
+    // see the datasheet for your particular AVR MCU.
+    SMCR = (0 &lt;&lt; SM0) | (1 &lt;&lt; SE); // idle mode, adjust to your project
+    QV_CPU_SLEEP();  // atomically go to sleep and enable interrupts
+}
+
+void BSP_pauseTimer(void)
+{
+    s_timerPaused = 1;
+}
+
+void BSP_resumeTimer(void)
+{
+    s_timerPaused = 0;
+}
+
+//............................................................................
+void BSP_init(void)   {
+    // Don't activate timer events until resources initialized
+    BSP_pauseTimer();
+    BSP_initTick();
+    BSP_initKnob();
+    BSP_initSwitch();
+    BSP_initMotor();
+    BSP_resumeTimer();
+}
+//............................................................................
+void BSP_start(void) {
+    // Initialize event pools
+    consoleDisplay(&quot;App starting&quot;);
+#ifdef USE_DYNAMIC
+    // Trial and Error: the pool must be sized for the  largest event.
+    static QF_MPOOL_EL(MoveEvt) smlPoolSto[10];
+    QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
+#endif
+    // instantiate and start AOs
+
+    static QP::QEvtPtr switchQueueSto[10];
+    APP::AO_Switch-&gt;start(
+        1U,                          // QP prio. of the AO
+        switchQueueSto,              // event queue storage
+        Q_DIM(switchQueueSto),       // queue length [events]
+        nullptr, 0U,                 // no stack storage
+        (void *)AO_Motor);           // attach switch client
+
+    static QP::QEvtPtr motorQueueSto[10];
+    AO_Motor-&gt;start(
+        2U,                         // QP prio. of the AO
+        motorQueueSto,              // event queue storage
+        Q_DIM(motorQueueSto),       // queue length [events]
+        nullptr, 0U,                // no stack storage
+        (void *)AO_MotionMgr);      // attach motor client
+
+    static QP::QEvtPtr motionMgrQueueSto[10];
+    AO_MotionMgr-&gt;start(
+        3U,                          // QP prio. of the AO
+        motionMgrQueueSto,           // event queue storage
+        Q_DIM(motionMgrQueueSto),    // queue length [events]
+        nullptr, 0U,                 // no stack storage
+        (void *)0);                  // no initialization param
+
+    static QP::QEvtPtr knobQueueSto[10];
+    AO_Knob-&gt;start(
+        4U,                          // QP prio. of the AO
+        knobQueueSto,                // event queue storage
+        Q_DIM(knobQueueSto),         // queue length [events]
+        nullptr0, 0U,                // no stack storage
+        (void *)AO_MotionMgr);       // attach knob client
+
+    consoleDisplay(&quot;App started&quot;);
+}
+//............................................................................
+void BSP_ledOff(void) { consoleDisplay(&quot;LED OFF&quot;); }
+//............................................................................
+void BSP_ledOn(void)  { consoleDisplay(&quot;LED ON&quot;);  }
+
+// callback functions needed by the framework --------------------------------
+void QF_onStartup(void) {}
+void QF_onCleanup(void) {}
+#if 0
+void QF_onClockTick(void) {
+    QF_TICK_X(0U, (void *)0); // QF clock tick processing for rate 0
+}
+#endif
+Q_NORETURN Q_onError(char const * const module, int_t const id) {
+#ifdef USE_SERIAL
+    consoleDisplay(&quot;Q ERROR&quot;);
+#endif
+    while (1) {}
+}
+</text>
+  </file>
+  <!--${.::motor.cpp}-->
+  <file name="motor.cpp">
+   <text>#include &quot;qpc.h&quot;    // QP/C real-time embedded framework
+#include &quot;bsp.h&quot;    // Board Support Package interface
+#include &quot;common.h&quot;
+#include &quot;console.h&quot;
+#include &quot;motion.h&quot;
+
+// ask QM to declare the Motor class
+$declare ${AOs::Motor}
+$define ${Shared::Motor_ctor}
+$define ${Shared::AO_Motor}
+$define ${AOs::Motor}</text>
+  </file>
+  <!--${.::main.cpp}-->
+  <file name="main.cpp">
+   <text>#include &quot;qpc.hpp&quot;                 // QP/C real-time embedded framework
+#include &quot;bsp.hpp&quot;                 // Board Support Package
+#include &quot;console.hpp&quot;
+
+//............................................................................
+void setup() {
+    consoleInit();
+    QF_init();       // initialize the framework and the underlying RT kernel
+    BSP_init();      // initialize the BSP
+    BSP_start();     // start the AOs/Threads
+}
+
+void loop() {
+    // put your main code here, to run repeatedly:
+    QF_run();        // run the QF application
+}</text>
+  </file>
+  <!--${.::knob.cpp}-->
+  <file name="knob.cpp">
+   <text>#include &quot;qpc.h&quot;    // QP/C real-time embedded framework
+#include &quot;bsp.h&quot;    // Board Support Package interface
+#include &quot;common.h&quot;
+#include &quot;console.h&quot;
+#include &quot;motion.h&quot;
+
+// ask QM to declare the Knob class
+$declare ${AOs::Knob}
+$define ${Shared::Knob_ctor}
+$define ${Shared::AO_Knob}
+$define ${AOs::Knob}</text>
+  </file>
+  <!--${.::motionMgr.cpp}-->
+  <file name="motionMgr.cpp">
+   <text>#include &quot;qpc.h&quot;    // QP/C real-time embedded framework
+#include &quot;bsp.h&quot;    // Board Support Package interface
+#include &quot;common.h&quot;
+#include &quot;console.h&quot;
+
+// ask QM to declare the Motor class
+$declare ${AOs::MotionMgr}
+$define ${Shared::MotionMgr_ctor}
+$define ${Shared::AO_MotionMgr}
+$define ${AOs::MotionMgr}</text>
+  </file>
+  <!--${.::switch.cpp}-->
+  <file name="switch.cpp">
+   <text>#include &quot;qpc.h&quot;    // QP/C real-time embedded framework
+#include &quot;bsp.h&quot;    // Board Support Package interface
+#include &quot;common.h&quot;
+#include &quot;console.h&quot;
+#include &quot;motion.h&quot;
+
+// ask QM to declare the Switch class
+$declare ${AOs::Switch}
+$define ${Shared::Switch_ctor}
+$define ${Shared::AO_Switch}
+$define ${AOs::Switch}</text>
+  </file>
+ </directory>
+</model>
