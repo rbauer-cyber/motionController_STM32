@@ -32,12 +32,63 @@
 #include "motion.h"
 #include "console.h"
 
-#ifdef USE_QUANTUM
-void appSysTickHandler()
+// Define functions for enabling/disabling HAL interrupts for critical sections
+// and for setting/detecting Q system events.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void QF_int_disable_(void)
 {
-	Q_SysTick_Handler();
+	HAL_SuspendTick();
+}
+
+void QF_int_enable_(void)
+{
+	HAL_ResumeTick();
+}
+
+void QF_crit_entry_(void)
+{
+	HAL_SuspendTick();
+}
+
+void QF_crit_exit_(void)
+{
+	HAL_ResumeTick();
+}
+
+volatile static uint16_t s_sysAppInterrupt = 0;
+
+volatile void QF_setSysAppEvent()
+{
+	s_sysAppInterrupt = 1;
+}
+
+volatile void QF_clearSysAppEvent()
+{
+	s_sysAppInterrupt = 0;
+}
+
+volatile uint16_t QF_getSysAppEvent()
+{
+	return s_sysAppInterrupt;
+}
+
+#ifdef __cplusplus
 }
 #endif
+
+void appSysTickHandler()
+{
+	// Use this variable to communicate with QV::onIdle
+	// to indicate that a critical interrupt from the app
+	// has occurred and needs to be service.
+	Q_SysTick_Handler();
+
+	if ( !QF_getSysAppEvent() )
+		QF_setSysAppEvent();
+}
 
 //kAnalogPin00,	//PA0	A0 - CN8 - IN1
 //kAnalogPin01,	//PA1	A1 - CN8 - IN2

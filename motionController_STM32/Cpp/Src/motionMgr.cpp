@@ -68,7 +68,7 @@ void MotionMgr::SendMoveEvent(uint16_t position) {
     // Request new motor postiion
     MoveEvt *myEvt = Q_NEW(MoveEvt, MOVE_SIG);
     myEvt->position = position;
-    APP::AO_Motor->POST(myEvt, this);
+    m_AO_Client->POST(myEvt, this);
 }
 
 //${AOs::MotionMgr::SendFindLimitEvent} ......................................
@@ -77,7 +77,7 @@ void MotionMgr::SendFindLimitEvent() {
     MoveEvt *myEvt = Q_NEW(MoveEvt, FIND_LIMIT_SIG);
     myEvt->position = -4000;
     //AO_Motor->Post(myEvt, this);
-    APP::AO_Motor->POST(myEvt, this);
+    m_AO_Client->POST(myEvt, this);
 }
 
 //${AOs::MotionMgr::MotionMgr} ...............................................
@@ -94,6 +94,7 @@ MotionMgr::MotionMgr()
 Q_STATE_DEF(MotionMgr, initial) {
     //${AOs::MotionMgr::SM::initial}
     //(void)par; // unused parameter
+    m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
     consoleDisplay("MotionMgr: starting\r\n");
     return tran(&idle);
 }

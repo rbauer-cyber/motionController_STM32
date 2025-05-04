@@ -108,11 +108,7 @@ void start() {
     const int numActors = 5;
     static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
-#if 0
-    // initialize publish-subscribe
-    static QP::QSubscrList subscrSto[APP::MAX_PUB_SIG];
-    QP::QActive::psInit(subscrSto, Q_DIM(subscrSto));
-#endif
+
     // start AOs... QV kernel bare metal, no threads
     APP::ClientEvt *mySwitchEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     mySwitchEvt->client = APP::AO_Motor;
@@ -134,13 +130,15 @@ void start() {
         nullptr, 0U,                 // no stack storage
         myMotorEvt);                     // attach motor client
 
+    APP::ClientEvt *myMotionEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
+    myMotionEvt->client = APP::AO_Motor;
     static QP::QEvt const *motionMgrQueueSto[numActors];
     APP::AO_MotionMgr->start(
         3U,                        // QP prio. of the AO
         motionMgrQueueSto,         // event queue storage
         Q_DIM(motionMgrQueueSto),  // queue length [events]
         nullptr, 0U,               // no stack storage
-        nullptr);
+        myMotionEvt);
 
     APP::ClientEvt *myKnobEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     myKnobEvt->client = APP::AO_MotionMgr;
@@ -207,14 +205,6 @@ void QV::onIdle() { // CAUTION: called with interrupts DISABLED, see NOTE0
 
     // toggle an LED on and then off (not enough LEDs, see NOTE02)
     QF_INT_DISABLE();
-#ifdef USE_LEDS
-    LED_GPIO_PORT->BSRRL = LED6_PIN; // turn LED on
-    __NOP(); // wait a little to actually see the LED glow
-    __NOP();
-    __NOP();
-    __NOP();
-    LED_GPIO_PORT->BSRRH = LED6_PIN; // turn LED off
-#endif
 
 #ifdef Q_SPY
     QF_INT_ENABLE();
@@ -236,6 +226,12 @@ void QV::onIdle() { // CAUTION: called with interrupts DISABLED, see NOTE0
     QV_CPU_SLEEP(); // atomically go to sleep and enable interrupts
 #else
     QF_INT_ENABLE(); // just enable interrupts
+    // g_sysAppInterrupt is set by events in QP indicating system state
+    // has changed and the ready queue must be re-examined for active objects
+    // ready to run. Continually disabling and enabling interrupts is
+    // very inefficient and interferes with the event loop.
+    while ( !QF_getSysAppEvent() ) {}
+    QF_clearSysAppEvent();
 #endif
 }
 

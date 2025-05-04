@@ -53,6 +53,7 @@ public:
     std::int16_t m_currentPosition;
     std::int16_t m_motorIncrement;
     std::int8_t m_knobPosition;
+    QP::QActive * m_AO_Client;
 
 private:
     void SendMoveEvent(uint16_t position);

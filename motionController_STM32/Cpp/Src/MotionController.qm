@@ -441,6 +441,8 @@ else {
    <attribute name="m_motorIncrement" type="std::int16_t" visibility="0x00" properties="0x00"/>
    <!--${AOs::MotionMgr::m_knobPosition}-->
    <attribute name="m_knobPosition" type="std::int8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::MotionMgr::m_AO_Client}-->
+   <attribute name="m_AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
    <!--${AOs::MotionMgr::SendMoveEvent}-->
    <operation name="SendMoveEvent" type="void" visibility="0x02" properties="0x00">
     <!--${AOs::MotionMgr::SendMoveEvent::position}-->
@@ -448,7 +450,7 @@ else {
     <code>// Request new motor postiion
 MoveEvt *myEvt = Q_NEW(MoveEvt, MOVE_SIG);
 myEvt-&gt;position = position;
-APP::AO_Motor-&gt;POST(myEvt, this);</code>
+m_AO_Client-&gt;POST(myEvt, this);</code>
    </operation>
    <!--${AOs::MotionMgr::SendFindLimitEvent}-->
    <operation name="SendFindLimitEvent" type="void" visibility="0x02" properties="0x00">
@@ -456,7 +458,7 @@ APP::AO_Motor-&gt;POST(myEvt, this);</code>
 MoveEvt *myEvt = Q_NEW(MoveEvt, FIND_LIMIT_SIG);
 myEvt-&gt;position = -4000;
 //AO_Motor-&gt;Post(myEvt, this);
-APP::AO_Motor-&gt;POST(myEvt, this);</code>
+m_AO_Client-&gt;POST(myEvt, this);</code>
    </operation>
    <!--${AOs::MotionMgr::MotionMgr}-->
    <operation name="MotionMgr" type="" visibility="0x00" properties="0x00">
@@ -473,6 +475,7 @@ m_knobPosition = 0;</code>
     <!--${AOs::MotionMgr::SM::initial}-->
     <initial target="../1">
      <action>//(void)par; // unused parameter
+m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
 consoleDisplay(&quot;MotionMgr: starting\r\n&quot;);</action>
      <initial_glyph color="3" conn="26,4,4,0,9">
       <action box="0,-2,10,2"/>
@@ -994,11 +997,7 @@ void start() {
     const int numActors = 5;
     static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
-#if 0
-    // initialize publish-subscribe
-    static QP::QSubscrList subscrSto[APP::MAX_PUB_SIG];
-    QP::QActive::psInit(subscrSto, Q_DIM(subscrSto));
-#endif
+
     // start AOs... QV kernel bare metal, no threads
     APP::ClientEvt *mySwitchEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     mySwitchEvt-&gt;client = APP::AO_Motor;
@@ -1020,13 +1019,15 @@ void start() {
         nullptr, 0U,                 // no stack storage
         myMotorEvt);                     // attach motor client
 
+    APP::ClientEvt *myMotionEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
+    myMotionEvt-&gt;client = APP::AO_Motor;
     static QP::QEvt const *motionMgrQueueSto[numActors];
     APP::AO_MotionMgr-&gt;start(
         3U,                        // QP prio. of the AO
         motionMgrQueueSto,         // event queue storage
         Q_DIM(motionMgrQueueSto),  // queue length [events]
         nullptr, 0U,               // no stack storage
-        nullptr);
+        myMotionEvt);
 
     APP::ClientEvt *myKnobEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     myKnobEvt-&gt;client = APP::AO_MotionMgr;
@@ -1093,14 +1094,6 @@ void QV::onIdle() { // CAUTION: called with interrupts DISABLED, see NOTE0
 
     // toggle an LED on and then off (not enough LEDs, see NOTE02)
     QF_INT_DISABLE();
-#ifdef USE_LEDS
-    LED_GPIO_PORT-&gt;BSRRL = LED6_PIN; // turn LED on
-    __NOP(); // wait a little to actually see the LED glow
-    __NOP();
-    __NOP();
-    __NOP();
-    LED_GPIO_PORT-&gt;BSRRH = LED6_PIN; // turn LED off
-#endif
 
 #ifdef Q_SPY
     QF_INT_ENABLE();
@@ -1122,6 +1115,12 @@ void QV::onIdle() { // CAUTION: called with interrupts DISABLED, see NOTE0
     QV_CPU_SLEEP(); // atomically go to sleep and enable interrupts
 #else
     QF_INT_ENABLE(); // just enable interrupts
+    // g_sysAppInterrupt is set by events in QP indicating system state
+    // has changed and the ready queue must be re-examined for active objects
+    // ready to run. Continually disabling and enabling interrupts is
+    // very inefficient and interferes with the event loop.
+    while ( !QF_getSysAppEvent() ) {}
+    QF_clearSysAppEvent();
 #endif
 }
 
