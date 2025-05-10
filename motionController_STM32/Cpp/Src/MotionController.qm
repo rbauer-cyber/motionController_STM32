@@ -163,6 +163,10 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
    client(appClient)</code>
    </operation>
   </class>
+  <!--${Shared::AO_Terminal}-->
+  <attribute name="AO_Terminal" type="QP::QActive * const" visibility="0x00" properties="0x00">
+   <code>= &amp;Terminal::inst;</code>
+  </attribute>
  </package>
  <!--${AOs}-->
  <package name="AOs" stereotype="0x02" namespace="APP::">
@@ -513,7 +517,7 @@ m_knobPosition = knobPosition;
 
 SendMoveEvent(newPosition);                    </action>
        <choice_glyph color="1" conn="12,33,4,0,8">
-        <action box="0,1,11,2"/>
+        <action box="0,1,13,2"/>
        </choice_glyph>
       </choice>
       <tran_glyph color="1" conn="12,25,2,-1,8">
@@ -594,7 +598,7 @@ m_AO_Client-&gt;POST(pEvt, this);</code>
 if ( m_position != m_lastPosition )
 {
     m_lastPosition = m_position;
-    consoleDisplayArgs(&quot;Knob: notify, new position = %d&quot;, m_position);
+    consoleDisplayArgs(&quot;Knob: notify, new position = %d\r\n&quot;, m_position);
     knobChanged = 1;
 }
 
@@ -632,7 +636,7 @@ m_timeEvt.disarm();</code>
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
 consoleDisplay(&quot;Knob: starting\r\n&quot;);
 //CreateOneShotTimer(1000);</action>
-     <initial_glyph color="3" conn="22,2,4,0,11">
+     <initial_glyph color="3" conn="22,2,4,0,10">
       <action box="0,-2,10,2"/>
      </initial_glyph>
     </initial>
@@ -645,7 +649,7 @@ consoleDisplay(&quot;Knob: starting\r\n&quot;);
 int8_t knobPosition = Q_EVT_CAST(KnobEvt)-&gt;position;
 m_position = knobPosition;
 BSP_setPositionKnob(knobPosition);</action>
-      <tran_glyph color="1" conn="45,7,0,-1,13">
+      <tran_glyph color="1" conn="45,6,0,-1,13">
        <action box="-4,6,12,4"/>
       </tran_glyph>
      </tran>
@@ -664,11 +668,11 @@ if ( m_notifyCount &gt;= 1 )
 CreateOneShotTimer(1000);</entry>
       <!--${AOs::Knob::SM::running::idle::UPDATE_TIME}-->
       <tran trig="UPDATE_TIME" target="../../2">
-       <tran_glyph color="1" conn="18,25,2,0,8">
+       <tran_glyph color="1" conn="18,24,2,0,8">
         <action box="0,2,12,2"/>
        </tran_glyph>
       </tran>
-      <state_glyph node="13,13,25,12">
+      <state_glyph node="13,12,25,12">
        <entry box="0,3,13,2"/>
       </state_glyph>
      </state>
@@ -681,15 +685,15 @@ m_notifyCount += 1;
 CreateOneShotTimer(1000);</entry>
       <!--${AOs::Knob::SM::running::updatePosition::UPDATE_TIME}-->
       <tran trig="UPDATE_TIME" target="../../1">
-       <tran_glyph color="1" conn="33,33,0,2,-8">
+       <tran_glyph color="1" conn="33,32,0,2,-8">
         <action box="1,-3,13,2"/>
        </tran_glyph>
       </tran>
-      <state_glyph color="2" node="13,33,25,13">
+      <state_glyph color="2" node="13,32,25,13">
        <entry box="0,3,16,2"/>
       </state_glyph>
      </state>
-     <state_glyph node="6,7,47,43"/>
+     <state_glyph node="6,6,47,43"/>
     </state>
     <state_diagram size="63,56"/>
    </statechart>
@@ -824,6 +828,224 @@ CreateOneShotTimer(1000);</entry>
      </state_glyph>
     </state>
     <state_diagram size="45,52"/>
+   </statechart>
+  </class>
+  <!--${AOs::Terminal}-->
+  <class name="Terminal" superclass="qpcpp::QActive">
+   <!--${AOs::Terminal::inst}-->
+   <attribute name="inst" type="Terminal" visibility="0x00" properties="0x01"/>
+   <!--${AOs::Terminal::m_timeEvt}-->
+   <attribute name="m_timeEvt" type="QP::QTimeEvt" visibility="0x02" properties="0x00"/>
+   <!--${AOs::Terminal::m_gotReply}-->
+   <attribute name="m_gotReply" type="bool" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Terminal::m_input[20]}-->
+   <attribute name="m_input[20]" type="char" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Terminal::m_replySize}-->
+   <attribute name="m_replySize" type="std::uint8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Terminal::m_gotChar}-->
+   <attribute name="m_gotChar" type="bool" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Terminal::m_maxInputSize}-->
+   <attribute name="m_maxInputSize" type="std::uint8_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Terminal::m_AO_Client}-->
+   <attribute name="m_AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Terminal::m_motorPosition}-->
+   <attribute name="m_motorPosition" type="std::uint16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Terminal::m_knobPosition}-->
+   <attribute name="m_knobPosition" type="std::uint16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Terminal::Terminal}-->
+   <operation name="Terminal" type="" visibility="0x00" properties="0x00">
+    <code>  : QActive(Q_STATE_CAST(&amp;initial)),
+    m_timeEvt(this, TIMEOUT_SIG, 0U)</code>
+   </operation>
+   <!--${AOs::Terminal::DispatchCommand}-->
+   <operation name="DispatchCommand" type="void" visibility="0x00" properties="0x00">
+    <!--${AOs::Terminal::DispatchCommand::command}-->
+    <parameter name="command" type="char"/>
+    <code>// Read the incoming byte
+// Notify App if ped event selected.
+MoveEvt *pe = 0;
+KnobEvt *ke = 0;
+
+switch ( command ) {
+    case 'f':
+    case 'F':
+        pe = Q_NEW(MoveEvt, FIND_LIMIT_SIG);
+        pe-&gt;position = -4000;
+        AO_MotionMgr-&gt;POST(pe, this);
+        break;
+    case 'h':
+    case 'H':
+        pe = Q_NEW(MoveEvt, HOME_SIG);
+        AO_MotionMgr-&gt;POST(pe, this);
+        break;
+    case 'm':
+    case 'M':
+        pe = Q_NEW(MoveEvt, MOVE_SIG);
+        pe-&gt;position = 1000;
+        AO_Motor-&gt;POST(pe, this);
+        break;
+    case 'k':
+    case 'K':
+        RotateKnobCW();
+        ke = Q_NEW(KnobEvt, KNOB_SIG);
+        ke-&gt;position = m_knobPosition;
+        AO_Knob-&gt;POST(ke, this);
+        break;
+    case 'j':
+    case 'J':
+        RotateKnobCCW();
+        ke = Q_NEW(KnobEvt, KNOB_SIG);
+        ke-&gt;position = m_knobPosition;
+        AO_Knob-&gt;POST(ke, this);
+        break;
+    case 's':
+    case 'S':
+        pe = Q_NEW(MoveEvt, STOP_SIG);
+        AO_Motor-&gt;POST(pe, this);
+        break;
+    case 'u':
+    case 'U':
+        pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
+        AO_Motor-&gt;POST(pe, this);
+        break;
+    case '+':
+        m_motorPosition += 1000;
+        pe = Q_NEW(MoveEvt, MOVE_SIG);
+        pe-&gt;position = m_motorPosition;
+        AO_Motor-&gt;POST(pe, this);
+        break;
+    case '-':
+        m_motorPosition -= 1000;
+        pe = Q_NEW(MoveEvt, MOVE_SIG);
+        pe-&gt;position = m_motorPosition;
+        AO_Motor-&gt;POST(pe, this);
+        break;
+}
+</code>
+   </operation>
+   <!--${AOs::Terminal::RotateKnobCW}-->
+   <operation name="RotateKnobCW" type="void" visibility="0x00" properties="0x00">
+    <code>m_knobPosition += 1;</code>
+   </operation>
+   <!--${AOs::Terminal::RotateKnobCCW}-->
+   <operation name="RotateKnobCCW" type="void" visibility="0x00" properties="0x00">
+    <code>m_knobPosition -= 1;</code>
+   </operation>
+   <!--${AOs::Terminal::SM}-->
+   <statechart properties="0x00">
+    <!--${AOs::Terminal::SM::initial}-->
+    <initial target="../1">
+     <action>//consoleDisplay(&quot;Terminal running\r\n&quot;);
+m_maxInputSize = sizeof(m_input)/sizeof(m_input[0]);
+m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
+m_motorPosition = 1000;
+m_knobPosition = 1;
+consoleDisplay(&quot;Terminal: starting\r\n&quot;);</action>
+     <initial_glyph color="3" conn="59,6,5,1,-17">
+      <action box="0,-2,10,2"/>
+     </initial_glyph>
+    </initial>
+    <!--${AOs::Terminal::SM::start}-->
+    <state name="start">
+     <entry>//consoleDisplay(&quot;Terminal ::Idle\r\n&quot;);
+m_timeEvt.armX(1000, 0U);</entry>
+     <exit>m_timeEvt.disarm();</exit>
+     <!--${AOs::Terminal::SM::start::TIMEOUT}-->
+     <tran trig="TIMEOUT" target="../../3">
+      <action brief="Ready"/>
+      <tran_glyph conn="28,12,2,0,8">
+       <action box="-8,3,16,2"/>
+      </tran_glyph>
+     </tran>
+     <state_glyph node="12,3,30,9">
+      <entry box="0,3,6,2"/>
+      <exit box="0,5,6,2"/>
+     </state_glyph>
+    </state>
+    <!--${AOs::Terminal::SM::receiveUserReply}-->
+    <state name="receiveUserReply">
+     <entry>//consoleDisplay(&quot;Terminal ::Receiving USART\r\n&quot;);
+m_gotReply = false;
+m_gotChar = false;
+m_replySize = 0;</entry>
+     <!--${AOs::Terminal::SM::receiveUserReply::initial}-->
+     <initial target="../1">
+      <action>m_gotReply = false;
+m_gotChar = true;
+m_replySize = 0;
+
+consoleReadAsyncInit();</action>
+      <initial_glyph conn="17,42,5,0,11,4">
+       <action box="0,-2,10,2"/>
+      </initial_glyph>
+     </initial>
+     <!--${AOs::Terminal::SM::receiveUserReply::receivingNextChar}-->
+     <state name="receivingNextChar">
+      <entry>if ( m_gotChar )
+{
+    m_gotChar = false;
+    consoleReadByteAsync();
+}
+
+m_timeEvt.armX(300, 0U);</entry>
+      <exit>m_timeEvt.disarm();</exit>
+      <!--${AOs::Terminal::SM::receiveUserReply::receivingNextCha~::TIMEOUT}-->
+      <tran trig="TIMEOUT">
+       <action brief="Check Input">m_gotChar = (consoleInputReady()) ? true : false;
+
+if ( m_gotChar )
+{
+    m_gotReply = (consoleInputDone()) ? true : false;
+}</action>
+       <!--${AOs::Terminal::SM::receiveUserReply::receivingNextCha~::TIMEOUT::[NotDone]}-->
+       <choice target="../..">
+        <guard brief="NotDone">!m_gotReply</guard>
+        <action brief="Got Char"/>
+        <choice_glyph conn="22,61,5,2,11,-8">
+         <action box="4,-3,17,2"/>
+        </choice_glyph>
+       </choice>
+       <!--${AOs::Terminal::SM::receiveUserReply::receivingNextCha~::TIMEOUT::[GotReply]}-->
+       <choice target="../../../../3">
+        <guard brief="GotReply">m_gotReply</guard>
+        <action brief="Done">m_replySize = consoleReadString(m_input, m_maxInputSize);
+consoleDisplay(&quot;\r\n&quot;);
+consoleDisplay(m_input);
+DispatchCommand(m_input[0]);</action>
+        <choice_glyph conn="22,61,4,1,9,36,-46,-16">
+         <action box="-8,4,16,3"/>
+        </choice_glyph>
+       </choice>
+       <tran_glyph conn="22,53,2,-1,8">
+        <action box="-7,2,19,2"/>
+       </tran_glyph>
+      </tran>
+      <state_glyph node="17,46,22,7">
+       <entry box="0,3,6,2"/>
+       <exit box="0,5,6,2"/>
+      </state_glyph>
+     </state>
+     <state_glyph node="11,36,34,37">
+      <entry box="0,3,6,2"/>
+     </state_glyph>
+    </state>
+    <!--${AOs::Terminal::SM::sendUserPrompt}-->
+    <state name="sendUserPrompt">
+     <entry>m_timeEvt.armX(500, 0U);</entry>
+     <exit>m_timeEvt.disarm();</exit>
+     <!--${AOs::Terminal::SM::sendUserPrompt::TIMEOUT}-->
+     <tran trig="TIMEOUT" target="../../2">
+      <action brief="Send Prompt">consoleDisplay(&quot;Enter command: &quot;);</action>
+      <tran_glyph conn="28,28,2,0,8">
+       <action box="-8,3,21,2"/>
+      </tran_glyph>
+     </tran>
+     <state_glyph node="12,20,30,8">
+      <entry box="0,3,6,2"/>
+      <exit box="0,5,6,2"/>
+     </state_glyph>
+    </state>
+    <state_diagram size="73,81"/>
    </statechart>
   </class>
  </package>
@@ -977,13 +1199,6 @@ void init() {
     SystemCoreClockUpdate();
 
 #if 0
-    consoleDisplayArgs(&quot;Dining Philosophers Problem example&quot;
-           &quot;\nQP %s\n&quot;
-           &quot;Press 'p' to pause\n&quot;
-           &quot;Press 's' to serve\n&quot;
-           &quot;Press ESC to quit...\n&quot;,
-           QP_VERSION_STR);
-
     if (!QS_INIT(argc &gt; 1 ? argv[1] : nullptr)) {
         Q_ERROR();
     }
@@ -994,7 +1209,7 @@ void start() {
     // initialize event pools
     consoleDisplay(&quot;App starting&quot;);
 
-    const int numActors = 5;
+    const int numActors = 6;
     static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 
@@ -1038,6 +1253,16 @@ void start() {
         Q_DIM(knobQueueSto),        // queue length [events]
         nullptr, 0U,                // no stack storage
         myKnobEvt);                 // attach switch client
+
+    APP::ClientEvt *myMotionMgrEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
+    myMotionMgrEvt-&gt;client = APP::AO_MotionMgr;
+    static QP::QEvtPtr terminalQueueSto[numActors];
+    APP::AO_Terminal-&gt;start(
+        5U,                          // QP prio. of the AO
+        terminalQueueSto,            // event queue storage
+        Q_DIM(terminalQueueSto),     // queue length [events]
+        nullptr, 0U,                 // no stack storage
+        myMotionMgrEvt);             // attach client
 
     consoleDisplay(&quot;App started\r\n&quot;);
 }
@@ -1254,6 +1479,28 @@ int bspMain() {
 }
 
 } //namespace BSP</text>
+  </file>
+  <!--${.::terminal.cpp}-->
+  <file name="terminal.cpp">
+   <text>#include &quot;qpcpp.hpp&quot;             // QP/C++ real-time embedded framework
+#include &quot;common.hpp&quot;               // DPP Application interface
+#include &quot;bsp.hpp&quot;               // Board Support Package
+
+#include &quot;console.h&quot;
+#include &quot;multiLed.hpp&quot;
+
+$declare ${AOs::Terminal}
+
+//----------------------------------------------------------------------------
+// unnamed namespace for local definitions with internal linkage
+namespace {
+Q_DEFINE_THIS_FILE
+
+}
+
+//----------------------------------------------------------------------------
+$define ${Shared::AO_Terminal}
+$define ${AOs::Terminal}</text>
   </file>
  </directory>
 </model>

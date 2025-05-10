@@ -91,7 +91,7 @@ std::uint8_t Knob::CheckKnobChanged() {
     if ( m_position != m_lastPosition )
     {
         m_lastPosition = m_position;
-        consoleDisplayArgs("Knob: notify, new position = %d", m_position);
+        consoleDisplayArgs("Knob: notify, new position = %d\r\n", m_position);
         knobChanged = 1;
     }
 

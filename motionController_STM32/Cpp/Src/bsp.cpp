@@ -88,13 +88,6 @@ void init() {
     SystemCoreClockUpdate();
 
 #if 0
-    consoleDisplayArgs("Dining Philosophers Problem example"
-           "\nQP %s\n"
-           "Press 'p' to pause\n"
-           "Press 's' to serve\n"
-           "Press ESC to quit...\n",
-           QP_VERSION_STR);
-
     if (!QS_INIT(argc > 1 ? argv[1] : nullptr)) {
         Q_ERROR();
     }
@@ -105,7 +98,7 @@ void start() {
     // initialize event pools
     consoleDisplay("App starting");
 
-    const int numActors = 5;
+    const int numActors = 6;
     static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 
@@ -149,6 +142,16 @@ void start() {
         Q_DIM(knobQueueSto),        // queue length [events]
         nullptr, 0U,                // no stack storage
         myKnobEvt);                 // attach switch client
+
+    APP::ClientEvt *myMotionMgrEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
+    myMotionMgrEvt->client = APP::AO_MotionMgr;
+    static QP::QEvtPtr terminalQueueSto[numActors];
+    APP::AO_Terminal->start(
+        5U,                          // QP prio. of the AO
+        terminalQueueSto,            // event queue storage
+        Q_DIM(terminalQueueSto),     // queue length [events]
+        nullptr, 0U,                 // no stack storage
+        myMotionMgrEvt);             // attach client
 
     consoleDisplay("App started\r\n");
 }

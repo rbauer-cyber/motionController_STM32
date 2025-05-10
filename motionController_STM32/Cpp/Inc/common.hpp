@@ -165,6 +165,9 @@ public:
     {}
 }; // class ClientEvt
 
+//${Shared::AO_Terminal} .....................................................
+extern QP::QActive * const AO_Terminal;
+
 } // namespace APP
 //$enddecl${Shared} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
