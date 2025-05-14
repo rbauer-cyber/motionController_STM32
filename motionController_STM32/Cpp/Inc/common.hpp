@@ -41,8 +41,8 @@
 //$declare${Shared} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace APP {
 
-//${Shared::AppSignals} ......................................................
-enum AppSignals : QP::QSignal {
+//${Shared::MotSignals} ......................................................
+enum MotSignals : QP::QSignal {
     MOVE_TIME_SIG = QP::Q_USER_SIG,
     UPDATE_TIME_SIG,
     MOVE_SIG,
@@ -54,7 +54,6 @@ enum AppSignals : QP::QSignal {
     KNOB_SIG,
     SWITCH_CHANGED_SIG,
     CLIENT_SIG,
-    TIMEOUT_SIG,
     SHOW_STATE_SIG
 };
 
@@ -165,8 +164,8 @@ public:
     {}
 }; // class ClientEvt
 
-//${Shared::AO_Terminal} .....................................................
-extern QP::QActive * const AO_Terminal;
+//${Shared::AO_TerminalMot} ..................................................
+extern QP::QActive * const AO_TerminalMot;
 
 } // namespace APP
 //$enddecl${Shared} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

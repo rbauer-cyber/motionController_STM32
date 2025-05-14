@@ -41,14 +41,13 @@
 #include "common.hpp"
 #include "main.h"
 #include "console.h"
+#include "QFsys.h"
 #include "bsp.hpp"    // Board Support Package interface
 #include "motion.h"
 
 #define TIMER_ONE_ISR
 #define TIMER_SCALAR 1
 #define KNOB_MAX 20
-
-static uint8_t s_timerPaused = 0;
 
 //============================================================================
 namespace { // unnamed namespace for local stuff with internal linkage
@@ -146,7 +145,7 @@ void start() {
     APP::ClientEvt *myMotionMgrEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     myMotionMgrEvt->client = APP::AO_MotionMgr;
     static QP::QEvtPtr terminalQueueSto[numActors];
-    APP::AO_Terminal->start(
+    APP::AO_TerminalMot->start(
         5U,                          // QP prio. of the AO
         terminalQueueSto,            // event queue storage
         Q_DIM(terminalQueueSto),     // queue length [events]
@@ -239,42 +238,7 @@ void QV::onIdle() { // CAUTION: called with interrupts DISABLED, see NOTE0
 }
 
 //............................................................................
-#if 0
-void QF::onClockTick() {
 
-    //QTimeEvt::TICK_X(0U, &l_clock_tick); // process time events at rate 0
-    SysTick_Config(SystemCoreClock / BSP::TICKS_PER_SEC);
-#ifdef QS
-    QS_RX_INPUT(); // handle the QS-RX input
-    QS_OUTPUT();   // handle the QS output
-#endif
-    if ( consoleInputReady() )
-    {
-        switch ( consoleReadByte() ) {
-#if 0 // TODO fix this!!!
-            case '\33': { // ESC pressed?
-                BSP::terminate(0);
-                break;
-            }
-            case 'p': {
-                static QEvt const pauseEvt(APP::PAUSE_SIG);
-                QActive::PUBLISH(&pauseEvt, &l_clock_tick);
-                break;
-            }
-            case 's': {
-                static QEvt const serveEvt(APP::SERVE_SIG);
-                QActive::PUBLISH(&serveEvt, &l_clock_tick);
-                break;
-            }
-#endif
-            default: {
-                break;
-            }
-        }
-    }
-}
-#endif
-//============================================================================
 #ifdef Q_SPY
 
 //............................................................................

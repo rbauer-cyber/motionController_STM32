@@ -13,6 +13,8 @@
 
 //#define ACCEL_STEPPER
 
+extern CMultiLed g_multiLed;
+
 #define USE_BUILTIN_SWITCH
 #define HIGH 1
 #define LOW 0
@@ -25,18 +27,6 @@ static int s_encoderPosition = 0;
 int16_t s_stepsPerRevolution = 2048;
 int16_t s_increment = 2048;
 int16_t s_motorSpeed = 15;
-
-static uint8_t s_multiLedPins[CMultiLed::MAX_LEDS] =
-{
-		kDigitalPin08, // PA9
-		kDigitalPin09, // PC7
-		kDigitalPin10, // PB6
-		kDigitalPin11, // PA7
-		kDigitalPin12, // PA6
-};
-
-static uint8_t s_numPins = sizeof(s_multiLedPins) / sizeof(s_multiLedPins[0]);
-CMultiLed g_multiLed( s_multiLedPins, s_numPins );
 
 #ifdef ACCEL_STEPPER
 // Initialize with pin sequence IN1-IN3-IN2-IN4

@@ -25,6 +25,7 @@
 #include "tim.h"
 #include "gpio.h"
 #include "usart.h"
+#include "QFsys.h"
 #include "bsp.hpp"
 
 #include "multiLed.hpp"
@@ -32,52 +33,6 @@
 #include "motion.h"
 #include "console.h"
 
-// Define functions for enabling/disabling HAL interrupts for critical sections
-// and for setting/detecting Q system events.
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void QF_int_disable_(void)
-{
-	HAL_SuspendTick();
-}
-
-void QF_int_enable_(void)
-{
-	HAL_ResumeTick();
-}
-
-void QF_crit_entry_(void)
-{
-	HAL_SuspendTick();
-}
-
-void QF_crit_exit_(void)
-{
-	HAL_ResumeTick();
-}
-
-volatile static uint16_t s_sysAppInterrupt = 0;
-
-volatile void QF_setSysAppEvent()
-{
-	s_sysAppInterrupt = 1;
-}
-
-volatile void QF_clearSysAppEvent()
-{
-	s_sysAppInterrupt = 0;
-}
-
-volatile uint16_t QF_getSysAppEvent()
-{
-	return s_sysAppInterrupt;
-}
-
-#ifdef __cplusplus
-}
-#endif
 
 void appSysTickHandler()
 {

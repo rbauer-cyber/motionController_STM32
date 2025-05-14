@@ -31,8 +31,8 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
  <framework name="qpcpp"/>
  <!--${Shared}-->
  <package name="Shared" stereotype="0x01" namespace="APP::">
-  <!--${Shared::AppSignals}-->
-  <attribute name="AppSignals" type="enum" visibility="0x04" properties="0x00">
+  <!--${Shared::MotSignals}-->
+  <attribute name="MotSignals" type="enum" visibility="0x04" properties="0x00">
    <code>: QP::QSignal {
     MOVE_TIME_SIG = QP::Q_USER_SIG,
     UPDATE_TIME_SIG,
@@ -45,7 +45,6 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
     KNOB_SIG,
     SWITCH_CHANGED_SIG,
     CLIENT_SIG,
-    TIMEOUT_SIG,
     SHOW_STATE_SIG
 };</code>
   </attribute>
@@ -163,9 +162,9 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
    client(appClient)</code>
    </operation>
   </class>
-  <!--${Shared::AO_Terminal}-->
-  <attribute name="AO_Terminal" type="QP::QActive * const" visibility="0x00" properties="0x00">
-   <code>= &amp;Terminal::inst;</code>
+  <!--${Shared::AO_TerminalMot}-->
+  <attribute name="AO_TerminalMot" type="QP::QActive * const" visibility="0x00" properties="0x00">
+   <code>= &amp;TerminalMot::inst;</code>
   </attribute>
  </package>
  <!--${AOs}-->
@@ -830,39 +829,24 @@ CreateOneShotTimer(1000);</entry>
     <state_diagram size="45,52"/>
    </statechart>
   </class>
-  <!--${AOs::Terminal}-->
-  <class name="Terminal" superclass="qpcpp::QActive">
-   <documentation>The Terminal Active Object:
-
-Supports an aynchronous interface for receiving ascii data from console input termnal like bash, .ie the Linux Terminal. It also provides a method to displatch any commands received on that interface. It receives one character at a time by detecting when the interrupt for the interface occurs until a carriage return is received, or until the maximum buffer size is received.</documentation>
-   <!--${AOs::Terminal::inst}-->
-   <attribute name="inst" type="Terminal" visibility="0x00" properties="0x01"/>
-   <!--${AOs::Terminal::m_timeEvt}-->
-   <attribute name="m_timeEvt" type="QP::QTimeEvt" visibility="0x02" properties="0x00"/>
-   <!--${AOs::Terminal::m_gotReply}-->
-   <attribute name="m_gotReply" type="bool" visibility="0x00" properties="0x00"/>
-   <!--${AOs::Terminal::m_input[20]}-->
-   <attribute name="m_input[20]" type="char" visibility="0x00" properties="0x00"/>
-   <!--${AOs::Terminal::m_replySize}-->
-   <attribute name="m_replySize" type="std::uint8_t" visibility="0x00" properties="0x00"/>
-   <!--${AOs::Terminal::m_gotChar}-->
-   <attribute name="m_gotChar" type="bool" visibility="0x00" properties="0x00"/>
-   <!--${AOs::Terminal::m_maxInputSize}-->
-   <attribute name="m_maxInputSize" type="std::uint8_t" visibility="0x00" properties="0x00"/>
-   <!--${AOs::Terminal::m_AO_Client}-->
-   <attribute name="m_AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
-   <!--${AOs::Terminal::m_motorPosition}-->
+  <!--${AOs::TerminalMot}-->
+  <class name="TerminalMot" superclass="BaseAOs::Terminal">
+   <!--${AOs::TerminalMot::inst}-->
+   <attribute name="inst" type="TerminalMot" visibility="0x00" properties="0x01"/>
+   <!--${AOs::TerminalMot::m_defined}-->
+   <attribute name="m_defined" type="int" visibility="0x00" properties="0x00"/>
+   <!--${AOs::TerminalMot::m_motorPosition}-->
    <attribute name="m_motorPosition" type="std::uint16_t" visibility="0x00" properties="0x00"/>
-   <!--${AOs::Terminal::m_knobPosition}-->
+   <!--${AOs::TerminalMot::m_knobPosition}-->
    <attribute name="m_knobPosition" type="std::uint16_t" visibility="0x00" properties="0x00"/>
-   <!--${AOs::Terminal::Terminal}-->
-   <operation name="Terminal" type="" visibility="0x00" properties="0x00">
-    <code>  : QActive(Q_STATE_CAST(&amp;initial)),
-    m_timeEvt(this, TIMEOUT_SIG, 0U)</code>
+   <!--${AOs::TerminalMot::TerminalMot}-->
+   <operation name="TerminalMot" type="" visibility="0x00" properties="0x00">
+    <code>  : m_defined(1)</code>
    </operation>
-   <!--${AOs::Terminal::DispatchCommand}-->
+   <!--${AOs::TerminalMot::DispatchCommand}-->
    <operation name="DispatchCommand" type="void" visibility="0x00" properties="0x00">
-    <!--${AOs::Terminal::DispatchCommand::command}-->
+    <specifiers>override</specifiers>
+    <!--${AOs::TerminalMot::DispatchCommand::command}-->
     <parameter name="command" type="char"/>
     <code>// Read the incoming byte
 // Notify App if ped event selected.
@@ -923,135 +907,20 @@ switch ( command ) {
         pe-&gt;position = m_motorPosition;
         AO_Motor-&gt;POST(pe, this);
         break;
-}
-</code>
+}</code>
    </operation>
-   <!--${AOs::Terminal::RotateKnobCW}-->
+   <!--${AOs::TerminalMot::RotateKnobCW}-->
    <operation name="RotateKnobCW" type="void" visibility="0x00" properties="0x00">
     <code>m_knobPosition += 1;</code>
    </operation>
-   <!--${AOs::Terminal::RotateKnobCCW}-->
+   <!--${AOs::TerminalMot::RotateKnobCCW}-->
    <operation name="RotateKnobCCW" type="void" visibility="0x00" properties="0x00">
     <code>m_knobPosition -= 1;</code>
    </operation>
-   <!--${AOs::Terminal::SM}-->
-   <statechart properties="0x00">
-    <!--${AOs::Terminal::SM::initial}-->
-    <initial target="../1">
-     <action>//consoleDisplay(&quot;Terminal running\r\n&quot;);
-m_maxInputSize = sizeof(m_input)/sizeof(m_input[0]);
-m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
-m_motorPosition = 1000;
-m_knobPosition = 1;
-consoleDisplay(&quot;Terminal: starting\r\n&quot;);</action>
-     <initial_glyph color="3" conn="59,6,5,1,-17">
-      <action box="0,-2,10,2"/>
-     </initial_glyph>
-    </initial>
-    <!--${AOs::Terminal::SM::start}-->
-    <state name="start">
-     <entry>//consoleDisplay(&quot;Terminal ::Idle\r\n&quot;);
-m_timeEvt.armX(1000, 0U);</entry>
-     <exit>m_timeEvt.disarm();</exit>
-     <!--${AOs::Terminal::SM::start::TIMEOUT}-->
-     <tran trig="TIMEOUT" target="../../3">
-      <action brief="Ready"/>
-      <tran_glyph conn="28,12,2,0,8">
-       <action box="-8,3,16,2"/>
-      </tran_glyph>
-     </tran>
-     <state_glyph node="12,3,30,9">
-      <entry box="0,3,6,2"/>
-      <exit box="0,5,6,2"/>
-     </state_glyph>
-    </state>
-    <!--${AOs::Terminal::SM::receiveUserReply}-->
-    <state name="receiveUserReply">
-     <entry>//consoleDisplay(&quot;Terminal ::Receiving USART\r\n&quot;);
-m_gotReply = false;
-m_gotChar = false;
-m_replySize = 0;</entry>
-     <!--${AOs::Terminal::SM::receiveUserReply::initial}-->
-     <initial target="../1">
-      <action>m_gotReply = false;
-m_gotChar = true;
-m_replySize = 0;
-
-consoleReadAsyncInit();</action>
-      <initial_glyph conn="17,42,5,0,11,4">
-       <action box="0,-2,10,2"/>
-      </initial_glyph>
-     </initial>
-     <!--${AOs::Terminal::SM::receiveUserReply::receivingNextChar}-->
-     <state name="receivingNextChar">
-      <entry>if ( m_gotChar )
-{
-    m_gotChar = false;
-    consoleReadByteAsync();
-}
-
-m_timeEvt.armX(300, 0U);</entry>
-      <exit>m_timeEvt.disarm();</exit>
-      <!--${AOs::Terminal::SM::receiveUserReply::receivingNextCha~::TIMEOUT}-->
-      <tran trig="TIMEOUT">
-       <action brief="Check Input">m_gotChar = (consoleInputReady()) ? true : false;
-
-if ( m_gotChar )
-{
-    m_gotReply = (consoleInputDone()) ? true : false;
-}</action>
-       <!--${AOs::Terminal::SM::receiveUserReply::receivingNextCha~::TIMEOUT::[NotDone]}-->
-       <choice target="../..">
-        <guard brief="NotDone">!m_gotReply</guard>
-        <action brief="Got Char"/>
-        <choice_glyph conn="22,61,5,2,11,-8">
-         <action box="4,-3,17,2"/>
-        </choice_glyph>
-       </choice>
-       <!--${AOs::Terminal::SM::receiveUserReply::receivingNextCha~::TIMEOUT::[GotReply]}-->
-       <choice target="../../../../3">
-        <guard brief="GotReply">m_gotReply</guard>
-        <action brief="Done">m_replySize = consoleReadString(m_input, m_maxInputSize);
-consoleDisplay(&quot;\r\n&quot;);
-consoleDisplay(m_input);
-DispatchCommand(m_input[0]);</action>
-        <choice_glyph conn="22,61,4,1,9,36,-46,-16">
-         <action box="-8,4,16,3"/>
-        </choice_glyph>
-       </choice>
-       <tran_glyph conn="22,53,2,-1,8">
-        <action box="-7,2,19,2"/>
-       </tran_glyph>
-      </tran>
-      <state_glyph node="17,46,22,7">
-       <entry box="0,3,6,2"/>
-       <exit box="0,5,6,2"/>
-      </state_glyph>
-     </state>
-     <state_glyph node="11,36,34,37">
-      <entry box="0,3,6,2"/>
-     </state_glyph>
-    </state>
-    <!--${AOs::Terminal::SM::sendUserPrompt}-->
-    <state name="sendUserPrompt">
-     <entry>m_timeEvt.armX(500, 0U);</entry>
-     <exit>m_timeEvt.disarm();</exit>
-     <!--${AOs::Terminal::SM::sendUserPrompt::TIMEOUT}-->
-     <tran trig="TIMEOUT" target="../../2">
-      <action brief="Send Prompt">consoleDisplay(&quot;Enter command: &quot;);</action>
-      <tran_glyph conn="28,28,2,0,8">
-       <action box="-8,3,21,2"/>
-      </tran_glyph>
-     </tran>
-     <state_glyph node="12,20,30,8">
-      <entry box="0,3,6,2"/>
-      <exit box="0,5,6,2"/>
-     </state_glyph>
-    </state>
-    <state_diagram size="73,81"/>
-   </statechart>
   </class>
  </package>
+ <extern_package file="./../../../../quantum_addon/quantum_addon/Cpp/Src/addon_shared.qmp"/>
+ <extern_package file="./../../../../quantum_addon/quantum_addon/Cpp/Src/addon_aos.qmp"/>
  <!--${.}-->
  <directory name=".">
   <!--${.::../Inc}-->
@@ -1155,14 +1024,13 @@ $declare ${AOs::Switch}
 #include &quot;common.hpp&quot;
 #include &quot;main.h&quot;
 #include &quot;console.h&quot;
+#include &quot;QFsys.h&quot;
 #include &quot;bsp.hpp&quot;    // Board Support Package interface
 #include &quot;motion.h&quot;
 
 #define TIMER_ONE_ISR
 #define TIMER_SCALAR 1
 #define KNOB_MAX 20
-
-static uint8_t s_timerPaused = 0;
 
 //============================================================================
 namespace { // unnamed namespace for local stuff with internal linkage
@@ -1260,7 +1128,7 @@ void start() {
     APP::ClientEvt *myMotionMgrEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     myMotionMgrEvt-&gt;client = APP::AO_MotionMgr;
     static QP::QEvtPtr terminalQueueSto[numActors];
-    APP::AO_Terminal-&gt;start(
+    APP::AO_TerminalMot-&gt;start(
         5U,                          // QP prio. of the AO
         terminalQueueSto,            // event queue storage
         Q_DIM(terminalQueueSto),     // queue length [events]
@@ -1353,42 +1221,7 @@ void QV::onIdle() { // CAUTION: called with interrupts DISABLED, see NOTE0
 }
 
 //............................................................................
-#if 0
-void QF::onClockTick() {
 
-    //QTimeEvt::TICK_X(0U, &amp;l_clock_tick); // process time events at rate 0
-    SysTick_Config(SystemCoreClock / BSP::TICKS_PER_SEC);
-#ifdef QS
-    QS_RX_INPUT(); // handle the QS-RX input
-    QS_OUTPUT();   // handle the QS output
-#endif
-    if ( consoleInputReady() )
-    {
-        switch ( consoleReadByte() ) {
-#if 0 // TODO fix this!!!
-            case '\33': { // ESC pressed?
-                BSP::terminate(0);
-                break;
-            }
-            case 'p': {
-                static QEvt const pauseEvt(APP::PAUSE_SIG);
-                QActive::PUBLISH(&amp;pauseEvt, &amp;l_clock_tick);
-                break;
-            }
-            case 's': {
-                static QEvt const serveEvt(APP::SERVE_SIG);
-                QActive::PUBLISH(&amp;serveEvt, &amp;l_clock_tick);
-                break;
-            }
-#endif
-            default: {
-                break;
-            }
-        }
-    }
-}
-#endif
-//============================================================================
 #ifdef Q_SPY
 
 //............................................................................
@@ -1483,27 +1316,18 @@ int bspMain() {
 
 } //namespace BSP</text>
   </file>
-  <!--${.::terminal.cpp}-->
-  <file name="terminal.cpp">
+  <!--${.::terminalMot.cpp}-->
+  <file name="terminalMot.cpp">
    <text>#include &quot;qpcpp.hpp&quot;             // QP/C++ real-time embedded framework
-#include &quot;common.hpp&quot;               // DPP Application interface
+#include &quot;common.hpp&quot;            // DPP Application interface
+#include &quot;terminal.hpp&quot;          // Base class for TerminalDpp 
 #include &quot;bsp.hpp&quot;               // Board Support Package
 
-#include &quot;console.h&quot;
-#include &quot;multiLed.hpp&quot;
-
-$declare ${AOs::Terminal}
+$declare ${AOs::TerminalMot}
 
 //----------------------------------------------------------------------------
-// unnamed namespace for local definitions with internal linkage
-namespace {
-Q_DEFINE_THIS_FILE
-
-}
-
-//----------------------------------------------------------------------------
-$define ${Shared::AO_Terminal}
-$define ${AOs::Terminal}</text>
+$define ${Shared::AO_TerminalMot}
+$define ${AOs::TerminalMot}</text>
   </file>
  </directory>
 </model>
