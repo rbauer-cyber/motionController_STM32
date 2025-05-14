@@ -832,6 +832,9 @@ CreateOneShotTimer(1000);</entry>
   </class>
   <!--${AOs::Terminal}-->
   <class name="Terminal" superclass="qpcpp::QActive">
+   <documentation>The Terminal Active Object:
+
+Supports an aynchronous interface for receiving ascii data from console input termnal like bash, .ie the Linux Terminal. It also provides a method to displatch any commands received on that interface. It receives one character at a time by detecting when the interrupt for the interface occurs until a carriage return is received, or until the maximum buffer size is received.</documentation>
    <!--${AOs::Terminal::inst}-->
    <attribute name="inst" type="Terminal" visibility="0x00" properties="0x01"/>
    <!--${AOs::Terminal::m_timeEvt}-->

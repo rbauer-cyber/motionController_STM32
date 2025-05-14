@@ -53,20 +53,6 @@ namespace { // unnamed namespace for local stuff with internal linkage
 
 Q_DEFINE_THIS_FILE
 
-#ifdef USE_LEDS
-// Local-scope objects -------------------------------------------------------
-GPIO_TypeDef * const LED_GPIO_PORT        = GPIOD;
-constexpr std::uint32_t LED_GPIO_CLK      {RCC_AHB1Periph_GPIOD};
-
-constexpr std::uint32_t LED4_PIN          {GPIO_Pin_12};
-constexpr std::uint32_t LED3_PIN          {GPIO_Pin_13};
-constexpr std::uint32_t LED5_PIN          {GPIO_Pin_14};
-constexpr std::uint32_t LED6_PIN          {GPIO_Pin_15};
-
-#define BTN_GPIO_PORT     GPIOA
-constexpr std::uint32_t BTN_GPIO_CLK      {RCC_AHB1Periph_GPIOA};
-constexpr std::uint32_t BTN_B1            {GPIO_Pin_0};
-
 static std::uint32_t l_rndSeed;
 
 #ifdef Q_SPY
@@ -84,8 +70,6 @@ static std::uint32_t l_rndSeed;
     };
 
 #endif
-#endif
-
 } // unnamed namespace
 
 //============================================================================
@@ -99,20 +83,8 @@ Q_NORETURN Q_onError(char const * const module, int_t const id) {
     // (assuming that you ship your production code with assertions enabled).
     Q_UNUSED_PAR(module);
     Q_UNUSED_PAR(id);
-    consoleDisplayArgs("ERROR in %s:%d\r\n", module, id);
+    consoleDisplayArgs("Q_onError in %s:%d\r\n", module, id);
     QS_ASSERTION(module, id, 10000U);
-
-#ifdef USE_LEDS
-    // light up the user LED
-    LED_GPIO_PORT->BSRRL = LED3_PIN;  // turn LED on
-    LED_GPIO_PORT->BSRRL = LED4_PIN;  // turn LED on
-    LED_GPIO_PORT->BSRRL = LED5_PIN;  // turn LED on
-    LED_GPIO_PORT->BSRRL = LED6_PIN;  // turn LED on
-    // for debugging, hang on in an endless loop...
-    for (;;) {
-    }
-#endif
-
 }
 //............................................................................
 void assert_failed(char const * const module, int_t const id); // prototype
@@ -129,35 +101,12 @@ void Q_SysTick_Handler(void) {
 
 	QP::QTimeEvt::TICK_X(0U, &l_SysTick_Handler); // time events at rate 0
 
-#ifdef USE_BUTTON
-    // Perform the debouncing of buttons. The algorithm for debouncing
-    // adapted from the book "Embedded Systems Dictionary" by Jack Ganssle
-    // and Michael Barr, page 71.
-    static struct {
-        std::uint32_t depressed;
-        std::uint32_t previous;
-    } buttons = { 0U, 0U };
-    std::uint32_t current = BTN_GPIO_PORT->IDR; // read BTN GPIO
-    std::uint32_t tmp = buttons.depressed; // save the depressed buttons
-    buttons.depressed |= (buttons.previous & current); // set depressed
-    buttons.depressed &= (buttons.previous | current); // clear released
-    buttons.previous   = current; // update the history
-    tmp ^= buttons.depressed;     // changed debounced depressed
-    current = buttons.depressed;
-
-    if ((tmp & BTN_B1) != 0U) { // debounced B1 state changed?
-        if ((current & BTN_B1) != 0U) { // is B1 depressed?
-            static QP::QEvt const pauseEvt(APP::PAUSE_SIG);
-            QP::QActive::PUBLISH(&pauseEvt, &l_SysTick_Handler);
-        }
-        else { // the button is released
-            static QP::QEvt const serveEvt(APP::SERVE_SIG);
-            QP::QActive::PUBLISH(&serveEvt, &l_SysTick_Handler);
-        }
-    }
-#endif
-
 #ifdef Q_SPY
+	// ISR for receiving bytes from the QSPY Back-End
+	// NOTE: This ISR is "QF-unaware" meaning that it does not interact with
+	// the QF/QV and is not disabled. Such ISRs don't need to call
+	// QV_ISR_ENTRY/QV_ISR_EXIT and they cannot post or publish events.
+
     tmp = SysTick->CTRL; // clear CTRL_COUNTFLAG
     QS_tickTime_ += QS_tickPeriod_; // account for the clock rollover
 #endif
@@ -221,44 +170,6 @@ void init() {
     SystemCoreClockUpdate();
 
     // NOTE The VFP (Floating Point Unit) unit is configured by QV-port
-#ifdef USE_LEDS
-    // Initialize thr port for the LEDs
-    RCC_AHB1PeriphClockCmd(LED_GPIO_CLK , ENABLE);
-
-    // GPIO Configuration for the LEDs...
-    GPIO_InitTypeDef GPIO_struct;
-    GPIO_struct.GPIO_Mode  = GPIO_Mode_OUT;
-    GPIO_struct.GPIO_OType = GPIO_OType_PP;
-    GPIO_struct.GPIO_PuPd  = GPIO_PuPd_UP;
-    GPIO_struct.GPIO_Speed = GPIO_Speed_50MHz;
-
-    GPIO_struct.GPIO_Pin = LED3_PIN;
-    GPIO_Init(LED_GPIO_PORT, &GPIO_struct);
-    LED_GPIO_PORT->BSRRH = LED3_PIN; // turn LED off
-
-    GPIO_struct.GPIO_Pin = LED4_PIN;
-    GPIO_Init(LED_GPIO_PORT, &GPIO_struct);
-    LED_GPIO_PORT->BSRRH = LED4_PIN; // turn LED off
-
-    GPIO_struct.GPIO_Pin = LED5_PIN;
-    GPIO_Init(LED_GPIO_PORT, &GPIO_struct);
-    LED_GPIO_PORT->BSRRH = LED5_PIN; // turn LED off
-
-    GPIO_struct.GPIO_Pin = LED6_PIN;
-    GPIO_Init(LED_GPIO_PORT, &GPIO_struct);
-    LED_GPIO_PORT->BSRRH = LED6_PIN; // turn LED off
-
-    // Initialize thr port for Button
-    RCC_AHB1PeriphClockCmd(BTN_GPIO_CLK , ENABLE);
-
-    // GPIO Configuration for the Button...
-    GPIO_struct.GPIO_Pin   = BTN_B1;
-    GPIO_struct.GPIO_Mode  = GPIO_Mode_IN;
-    GPIO_struct.GPIO_OType = GPIO_OType_PP;
-    GPIO_struct.GPIO_PuPd  = GPIO_PuPd_DOWN;
-    GPIO_struct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(BTN_GPIO_PORT, &GPIO_struct);
-#endif
     BSP::randomSeed(1234U);
 
 #ifdef QSPY
@@ -282,16 +193,12 @@ void init() {
 }
 //............................................................................
 void start() {
-    consoleDisplay("App starting");
-
+    consoleDisplay("App starting\r\n");
+	// initialize event pools
     const int numActors = 5;
     static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
-#if 0
-    // initialize publish-subscribe
-    static QP::QSubscrList subscrSto[APP::MAX_PUB_SIG];
-    QP::QActive::psInit(subscrSto, Q_DIM(subscrSto));
-#endif
+
     // start AOs... QV kernel bare metal, no threads
     APP::ClientEvt *mySwitchEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     mySwitchEvt->client = APP::AO_Motor;
@@ -331,20 +238,10 @@ void start() {
         nullptr, 0U,                // no stack storage
         myKnobEvt);                 // attach switch client
 
-    consoleDisplay("App started");
+    consoleDisplay("App started\r\n");
 }
 //............................................................................
-//............................................................................
 void displayPaused(uint8_t const paused) {
-#ifdef USE_LEDS
-    if (paused) {
-        LED_GPIO_PORT->BSRRL = LED4_PIN; // turn LED on
-    }
-    else {
-        LED_GPIO_PORT->BSRRH = LED4_PIN; // turn LED off
-    }
-#endif
-
 #ifdef QSPY
     // application-specific trace record
     QS_BEGIN_ID(PAUSED_STAT, APP::AO_Table->getPrio())
@@ -420,18 +317,7 @@ void QF::onCleanup() {
 }
 //............................................................................
 void QV::onIdle() { // CAUTION: called with interrupts DISABLED, see NOTE0
-
-    // toggle an LED on and then off (not enough LEDs, see NOTE02)
     QF_INT_DISABLE();
-#ifdef USE_LEDS
-    LED_GPIO_PORT->BSRRL = LED6_PIN; // turn LED on
-    __NOP(); // wait a little to actually see the LED glow
-    __NOP();
-    __NOP();
-    __NOP();
-    LED_GPIO_PORT->BSRRH = LED6_PIN; // turn LED off
-#endif
-
 #ifdef Q_SPY
     QF_INT_ENABLE();
     QS::rxParse();  // parse all the received bytes

@@ -164,6 +164,7 @@ void altMain()
 	//int motorIndex = 0;
 	//bool state = false;
 	encoderPosition = encoderUpdate();
+	BSP_initSwitch();
 	initMotor();
 #else
 	//BSP_initKnob(); // called from main

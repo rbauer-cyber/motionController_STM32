@@ -3,22 +3,21 @@
 #include "digitalOut.hpp"
 #include "gpio.h"
 
-//struct DigitalOut {
-//	GPIO_TypeDef* port;
-//	uint16_t pin;
-//};
-//
-//static DigitalOut s_digitalOut[] =
-//{
-//		{ GPIOA, GPIO_PIN_9 }, //D08 - PA_9
-//		{ GPIOC, GPIO_PIN_7 }, //D09 - PC_7
-//		{ GPIOB, GPIO_PIN_6 }, //D10 - PB_6
-//		{ GPIOA, GPIO_PIN_7 }, //D11 - PA_7
-//		{ GPIOA, GPIO_PIN_6 }, //D12 - PA_6
-//};
-
 // kDigitalPin13 selects builtin LED on the nucleo board
 static const EDigitalPin kBuiltinLED = kDigitalPin13;
+
+// Initialize and create global CMultiLed variable g_multiLed.
+static uint8_t s_multiLedPins[] =
+{
+		kDigitalPin08, // PA9
+		kDigitalPin09, // PC7
+		kDigitalPin10, // PB6
+		kDigitalPin11, // PA7
+		kDigitalPin12, // PA6
+};
+
+static uint8_t s_numPins = sizeof(s_multiLedPins) / sizeof(s_multiLedPins[0]);
+CMultiLed g_multiLed( s_multiLedPins, s_numPins );
 
 CMultiLed::CMultiLed( uint8_t ledPins[], uint8_t numPins )
 {
@@ -51,7 +50,7 @@ void CMultiLed::SetLed(uint8_t index, uint8_t state)
         EDigitalPin ePin = static_cast<EDigitalPin>(m_ledPins[index]);
         bool pinState = (state == 0) ? false : true;
         CDigitalOut::Write(ePin, pinState);
-        //consoleDisplayArgs("CMultiLed::SetLed: setting led %d to %d\r\n", index, pinState);
+        CONSOLE_DISPLAY_ARGS("CMultiLed::SetLed: setting led %d to %d\r\n", index, pinState);
     }
     else
     {
@@ -65,7 +64,7 @@ void CMultiLed::ToggleLed(uint8_t index)
     {
         EDigitalPin ePin = static_cast<EDigitalPin>(m_ledPins[index]);
         CDigitalOut::Toggle(ePin);
-        //consoleDisplayArgs("CMultiLed::ToggleLed: toggling led %d\r\n", index);
+        CONSOLE_DISPLAY_ARGS("CMultiLed::ToggleLed: toggling led %d\r\n", index);
     }
     else
     {
@@ -75,7 +74,7 @@ void CMultiLed::ToggleLed(uint8_t index)
 
 void CMultiLed::ShowState()
 {
-    consoleDisplayArgs("CMultiLed: numpins = %d, maxNumber = %d\r\n",
+	CONSOLE_DISPLAY_ARGS("CMultiLed: numpins = %d, maxNumber = %d\r\n",
     		m_numPins, m_maxNumber);
 }
 

@@ -160,6 +160,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  // This is a C++ function allowing project to support C++ classes
+	  // defined in the Cpp project subfolder; altMain never returns.
 	  altMain();
     /* USER CODE END WHILE */
 
