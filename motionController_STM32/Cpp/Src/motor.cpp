@@ -135,6 +135,7 @@ Motor::Motor()
 Q_STATE_DEF(Motor, initial) {
     //${AOs::Motor::SM::initial}
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
+    subscribe(SHOW_STATE_SIG);
     return tran(&MotionReady);
 }
 

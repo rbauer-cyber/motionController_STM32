@@ -128,6 +128,7 @@ Q_STATE_DEF(Knob, initial) {
     // Start periodic time to read knob position
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
     consoleDisplay("Knob: starting\r\n");
+    subscribe(SHOW_STATE_SIG);
     //CreateOneShotTimer(1000);
     return tran(&idle);
 }
@@ -143,6 +144,12 @@ Q_STATE_DEF(Knob, running) {
             int8_t knobPosition = Q_EVT_CAST(KnobEvt)->position;
             m_position = knobPosition;
             BSP_setPositionKnob(knobPosition);
+            status_ = Q_RET_HANDLED;
+            break;
+        }
+        //${AOs::Knob::SM::running::SHOW_STATE}
+        case SHOW_STATE_SIG: {
+            consoleDisplayArgs("Knob: position: %d\r\n", m_position);
             status_ = Q_RET_HANDLED;
             break;
         }

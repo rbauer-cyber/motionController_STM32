@@ -133,8 +133,15 @@ void TerminalMot::DispatchCommand(char command) {
             break;
         case 'u':
         case 'U':
+    #ifndef USE_PUBLISH
             pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
             AO_Motor->POST(pe, this);
+            ke = Q_NEW(KnobEvt, SHOW_STATE_SIG);
+            AO_Knob->POST(ke, this);
+    #else
+            pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
+            QP::QActive::PUBLISH(pe, this);
+    #endif
             break;
         case '+':
             m_motorPosition += 1000;

@@ -38,6 +38,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define USE_PUBLISH
+
 //$declare${Shared} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace APP {
 
@@ -45,6 +47,8 @@ namespace APP {
 enum MotSignals : QP::QSignal {
     MOVE_TIME_SIG = QP::Q_USER_SIG,
     UPDATE_TIME_SIG,
+    SHOW_STATE_SIG,
+    MAX_PUB_SIG,
     MOVE_SIG,
     FIND_LIMIT_SIG,
     HOME_SIG,
@@ -54,7 +58,6 @@ enum MotSignals : QP::QSignal {
     KNOB_SIG,
     SWITCH_CHANGED_SIG,
     CLIENT_SIG,
-    SHOW_STATE_SIG
 };
 
 //${Shared::AO_Motor} ........................................................

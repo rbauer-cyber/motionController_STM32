@@ -66,8 +66,9 @@ Q_NORETURN Q_onError(char const * const module, int_t const id) {
     QS_ASSERTION(module, id, 10000U); // report assertion to QS
     consoleDisplayArgs("ERROR in %s:%d\r\n", module, id);
     QP::QF::onCleanup();
+    // Never return, loop endlessly because of fatal error in QP system.
+    while (1) {}
     //QS_EXIT();
-    //exit(-1);
 }
 //............................................................................
 void assert_failed(char const * const module, int_t const id); // prototype
@@ -100,7 +101,11 @@ void start() {
     const int numActors = 6;
     static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
-
+#ifdef USE_PUBLISH
+    // initialize publish-subscribe
+    static QP::QSubscrList subscrSto[APP::MAX_PUB_SIG];
+    QP::QActive::psInit(subscrSto, Q_DIM(subscrSto));
+#endif
     // start AOs... QV kernel bare metal, no threads
     APP::ClientEvt *mySwitchEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     mySwitchEvt->client = APP::AO_Motor;
@@ -254,4 +259,35 @@ void QS::onCommand(std::uint8_t cmdId, std::uint32_t param1,
 #endif // Q_SPY
 
 } // namespace QP
+
+//============================================================================
+// NOTE0:
+// The QV_onIdle() callback is called with interrupts disabled, because the
+// determination of the idle condition might change by any interrupt posting
+// an event. QV_onIdle() must internally enable interrupts, ideally
+// atomically with putting the CPU to the power-saving mode.
+//
+// NOTE1:
+// The QF_AWARE_ISR_CMSIS_PRI constant from the QF port specifies the highest
+// ISR priority that is disabled by the QF framework. The value is suitable
+// for the NVIC_SetPriority() CMSIS function.
+//
+// Only ISRs prioritized at or below the QF_AWARE_ISR_CMSIS_PRI level (i.e.,
+// with the numerical values of priorities equal or higher than
+// QF_AWARE_ISR_CMSIS_PRI) are allowed to call any other QF/QV services.
+// These ISRs are "QF-aware".
+//
+// Conversely, any ISRs prioritized above the QF_AWARE_ISR_CMSIS_PRI priority
+// level (i.e., with the numerical values of priorities less than
+// QF_AWARE_ISR_CMSIS_PRI) are never disabled and are not aware of the kernel.
+// Such "QF-unaware" ISRs cannot call ANY QF/QV services. The only mechanism
+// by which a "QF-unaware" ISR can communicate with the QF framework is by
+// triggering a "QF-aware" ISR, which can post/publish events.
+//
+// NOTE2:
+// The User LED is used to visualize the idle loop activity. The brightness
+// of the LED is proportional to the frequency of the idle loop.
+// Please note that the LED is toggled with interrupts locked, so no interrupt
+// execution time contributes to the brightness of the User LED.
+//
 #endif

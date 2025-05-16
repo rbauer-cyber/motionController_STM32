@@ -36,6 +36,8 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
    <code>: QP::QSignal {
     MOVE_TIME_SIG = QP::Q_USER_SIG,
     UPDATE_TIME_SIG,
+    SHOW_STATE_SIG,
+    MAX_PUB_SIG,
     MOVE_SIG,
     FIND_LIMIT_SIG,
     HOME_SIG,
@@ -45,7 +47,6 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
     KNOB_SIG,
     SWITCH_CHANGED_SIG,
     CLIENT_SIG,
-    SHOW_STATE_SIG
 };</code>
   </attribute>
   <!--${Shared::AO_Motor}-->
@@ -260,7 +261,8 @@ m_moving = 0;</code>
     <documentation>Motor state machine</documentation>
     <!--${AOs::Motor::SM::initial}-->
     <initial target="../1">
-     <action>m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;</action>
+     <action>m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
+subscribe(SHOW_STATE_SIG);</action>
      <initial_glyph conn="12,2,5,0,16,4">
       <action box="0,-2,10,2"/>
      </initial_glyph>
@@ -630,10 +632,11 @@ m_timeEvt.disarm();</code>
    <statechart properties="0x01">
     <documentation>Knob state machine</documentation>
     <!--${AOs::Knob::SM::initial}-->
-    <initial target="../1/1">
+    <initial target="../1/2">
      <action>// Start periodic time to read knob position
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
 consoleDisplay(&quot;Knob: starting\r\n&quot;);
+subscribe(SHOW_STATE_SIG);
 //CreateOneShotTimer(1000);</action>
      <initial_glyph color="3" conn="22,2,4,0,10">
       <action box="0,-2,10,2"/>
@@ -652,6 +655,13 @@ BSP_setPositionKnob(knobPosition);</action>
        <action box="-4,6,12,4"/>
       </tran_glyph>
      </tran>
+     <!--${AOs::Knob::SM::running::SHOW_STATE}-->
+     <tran trig="SHOW_STATE">
+      <action>consoleDisplayArgs(&quot;Knob: position: %d\r\n&quot;, m_position);</action>
+      <tran_glyph color="1" conn="46,49,2,-1,-11">
+       <action box="-5,-7,13,2"/>
+      </tran_glyph>
+     </tran>
      <!--${AOs::Knob::SM::running::idle}-->
      <state name="idle">
       <entry brief="Notify Client">BSP_ToggleLed(BSP_MAX_LED);
@@ -666,7 +676,7 @@ if ( m_notifyCount &gt;= 1 )
 
 CreateOneShotTimer(1000);</entry>
       <!--${AOs::Knob::SM::running::idle::UPDATE_TIME}-->
-      <tran trig="UPDATE_TIME" target="../../2">
+      <tran trig="UPDATE_TIME" target="../../3">
        <tran_glyph color="1" conn="18,24,2,0,8">
         <action box="0,2,12,2"/>
        </tran_glyph>
@@ -683,7 +693,7 @@ m_notifyCount += 1;
 
 CreateOneShotTimer(1000);</entry>
       <!--${AOs::Knob::SM::running::updatePosition::UPDATE_TIME}-->
-      <tran trig="UPDATE_TIME" target="../../1">
+      <tran trig="UPDATE_TIME" target="../../2">
        <tran_glyph color="1" conn="33,32,0,2,-8">
         <action box="1,-3,13,2"/>
        </tran_glyph>
@@ -892,8 +902,15 @@ switch ( command ) {
         break;
     case 'u':
     case 'U':
+#ifndef USE_PUBLISH
         pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
         AO_Motor-&gt;POST(pe, this);
+        ke = Q_NEW(KnobEvt, SHOW_STATE_SIG);
+        AO_Knob-&gt;POST(ke, this);
+#else
+        pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
+        QP::QActive::PUBLISH(pe, this);
+#endif
         break;
     case '+':
         m_motorPosition += 1000;
@@ -958,6 +975,8 @@ void ledOff();
    <file name="common.hpp">
     <text>#ifndef COMMON_H
 #define COMMON_H
+
+#define USE_PUBLISH
 
 $declare ${Shared}
 
@@ -1049,8 +1068,9 @@ Q_NORETURN Q_onError(char const * const module, int_t const id) {
     QS_ASSERTION(module, id, 10000U); // report assertion to QS
     consoleDisplayArgs(&quot;ERROR in %s:%d\r\n&quot;, module, id);
     QP::QF::onCleanup();
+    // Never return, loop endlessly because of fatal error in QP system.
+    while (1) {}
     //QS_EXIT();
-    //exit(-1);
 }
 //............................................................................
 void assert_failed(char const * const module, int_t const id); // prototype
@@ -1083,7 +1103,11 @@ void start() {
     const int numActors = 6;
     static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
-
+#ifdef USE_PUBLISH
+    // initialize publish-subscribe
+    static QP::QSubscrList subscrSto[APP::MAX_PUB_SIG];
+    QP::QActive::psInit(subscrSto, Q_DIM(subscrSto));
+#endif
     // start AOs... QV kernel bare metal, no threads
     APP::ClientEvt *mySwitchEvt = Q_NEW(APP::ClientEvt, APP::CLIENT_SIG);
     mySwitchEvt-&gt;client = APP::AO_Motor;
@@ -1237,6 +1261,37 @@ void QS::onCommand(std::uint8_t cmdId, std::uint32_t param1,
 #endif // Q_SPY
 
 } // namespace QP
+
+//============================================================================
+// NOTE0:
+// The QV_onIdle() callback is called with interrupts disabled, because the
+// determination of the idle condition might change by any interrupt posting
+// an event. QV_onIdle() must internally enable interrupts, ideally
+// atomically with putting the CPU to the power-saving mode.
+//
+// NOTE1:
+// The QF_AWARE_ISR_CMSIS_PRI constant from the QF port specifies the highest
+// ISR priority that is disabled by the QF framework. The value is suitable
+// for the NVIC_SetPriority() CMSIS function.
+//
+// Only ISRs prioritized at or below the QF_AWARE_ISR_CMSIS_PRI level (i.e.,
+// with the numerical values of priorities equal or higher than
+// QF_AWARE_ISR_CMSIS_PRI) are allowed to call any other QF/QV services.
+// These ISRs are &quot;QF-aware&quot;.
+//
+// Conversely, any ISRs prioritized above the QF_AWARE_ISR_CMSIS_PRI priority
+// level (i.e., with the numerical values of priorities less than
+// QF_AWARE_ISR_CMSIS_PRI) are never disabled and are not aware of the kernel.
+// Such &quot;QF-unaware&quot; ISRs cannot call ANY QF/QV services. The only mechanism
+// by which a &quot;QF-unaware&quot; ISR can communicate with the QF framework is by
+// triggering a &quot;QF-aware&quot; ISR, which can post/publish events.
+//
+// NOTE2:
+// The User LED is used to visualize the idle loop activity. The brightness
+// of the LED is proportional to the frequency of the idle loop.
+// Please note that the LED is toggled with interrupts locked, so no interrupt
+// execution time contributes to the brightness of the User LED.
+//
 #endif</text>
   </file>
   <!--${.::motor.cpp}-->

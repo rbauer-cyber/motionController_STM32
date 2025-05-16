@@ -63,20 +63,6 @@ void appSysTickHandler()
 //white	 - IN3	- A4
 //black	 - IN4	- A5
 
-#ifndef USE_QUANTUM
-static uint8_t s_multiLedPins[] =
-{
-		kDigitalPin08, // PA9
-		kDigitalPin09, // PC7
-		kDigitalPin10, // PB6
-		kDigitalPin11, // PA7
-		kDigitalPin12, // PA6
-};
-
-static uint8_t s_numPins = sizeof(s_multiLedPins) / sizeof(s_multiLedPins[0]);
-CMultiLed g_multiLed( s_multiLedPins, s_numPins );
-#endif
-
 #ifdef USE_MOTOR
 int16_t s_stepsPerRevolution = 2048;
 int16_t s_increment = 2048;
