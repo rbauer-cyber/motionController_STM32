@@ -448,6 +448,10 @@ else {
    <attribute name="m_knobPosition" type="std::int8_t" visibility="0x00" properties="0x00"/>
    <!--${AOs::MotionMgr::m_AO_Client}-->
    <attribute name="m_AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
+   <!--${AOs::MotionMgr::m_name}-->
+   <attribute name="m_name" type="const char*" visibility="0x00" properties="0x01">
+    <code>= &quot;MotionMgr&quot;;</code>
+   </attribute>
    <!--${AOs::MotionMgr::SendMoveEvent}-->
    <operation name="SendMoveEvent" type="void" visibility="0x02" properties="0x00">
     <!--${AOs::MotionMgr::SendMoveEvent::position}-->
@@ -474,6 +478,22 @@ m_currentPosition = 0;
 m_motorIncrement = 400;
 m_knobPosition = 0;</code>
    </operation>
+   <!--${AOs::MotionMgr::ChangeKnobPosition}-->
+   <operation name="ChangeKnobPosition" type="void" visibility="0x00" properties="0x00">
+    <!--${AOs::MotionMgr::ChangeKnobPositi~::knobPosition}-->
+    <parameter name="knobPosition" type="std::uint8_t"/>
+    <code>// Knob position changed, determine new motor position
+int knobIncrement = knobPosition - m_knobPosition;
+int positionIncrement = knobIncrement * m_motorIncrement;
+int newPosition = m_currentPosition + positionIncrement;
+
+m_requestPosition = newPosition;
+consoleDisplayArgs(&quot;\r\n%s: knob position = %d\r\n&quot;, m_name, knobPosition);
+consoleDisplayArgs(&quot;%s: requested motor position = %d\r\n&quot;, m_name, newPosition);
+m_knobPosition = knobPosition;
+
+SendMoveEvent(newPosition);</code>
+   </operation>
    <!--${AOs::MotionMgr::SM}-->
    <statechart properties="0x01">
     <documentation>MotionMgr state machine</documentation>
@@ -481,21 +501,21 @@ m_knobPosition = 0;</code>
     <initial target="../1">
      <action>//(void)par; // unused parameter
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
-consoleDisplay(&quot;MotionMgr: starting\r\n&quot;);</action>
+consoleDisplayArgs(&quot;%s: starting\r\n&quot;, m_name);</action>
      <initial_glyph color="3" conn="26,4,4,0,9">
       <action box="0,-2,10,2"/>
      </initial_glyph>
     </initial>
     <!--${AOs::MotionMgr::SM::idle}-->
     <state name="idle">
-     <entry>consoleDisplay(&quot;MotionMgr: idle\r\n&quot;);</entry>
+     <entry>consoleDisplayArgs(&quot;%s: idle\r\n&quot;, m_name);</entry>
      <!--${AOs::MotionMgr::SM::idle::HOME}-->
      <tran trig="HOME" target="../../2">
       <action>// Send HOME event to initialize system
-consoleDisplay(&quot;MotionMgr: homing motor\r\n&quot;);
+consoleDisplayArgs(&quot;%s: homing motor\r\n&quot;, m_name);
 SendFindLimitEvent();</action>
-      <tran_glyph color="1" conn="24,25,2,0,16">
-       <action box="1,5,8,2"/>
+      <tran_glyph color="1" conn="26,25,2,0,16">
+       <action box="0,5,8,2"/>
       </tran_glyph>
      </tran>
      <!--${AOs::MotionMgr::SM::idle::KNOB}-->
@@ -506,23 +526,26 @@ int8_t knobPosition = Q_EVT_CAST(KnobEvt)-&gt;position;</action>
       <!--${AOs::MotionMgr::SM::idle::KNOB::[KnobChanged]}-->
       <choice target="../../../2">
        <guard brief="Knob Changed">knobPosition != m_knobPosition</guard>
-       <action>// Knob position changed, determine new motor position
-int knobIncrement = knobPosition - m_knobPosition;
-int positionIncrement = knobIncrement * m_motorIncrement;
-int newPosition = m_currentPosition + positionIncrement;
-
-m_requestPosition = newPosition;
-consoleDisplayArgs(&quot;MotionMgr: knob position = %d\r\n&quot;, knobPosition);
-consoleDisplayArgs(&quot;MotionMgr: requested motor position = %d\r\n&quot;, newPosition);
-m_knobPosition = knobPosition;
-
-SendMoveEvent(newPosition);                    </action>
+       <action>ChangeKnobPosition(knobPosition);</action>
        <choice_glyph color="1" conn="12,33,4,0,8">
         <action box="0,1,13,2"/>
        </choice_glyph>
       </choice>
       <tran_glyph color="1" conn="12,25,2,-1,8">
        <action box="1,3,7,2"/>
+      </tran_glyph>
+     </tran>
+     <!--${AOs::MotionMgr::SM::idle::MOVED}-->
+     <tran trig="MOVED">
+      <action brief="Update Position">int16_t position = Q_EVT_CAST(MovedEvt)-&gt;position;
+
+if ( m_currentPosition != position )
+{
+    m_currentPosition = position;
+    consoleDisplayArgs(&quot;%s: motor position = %d\r\n&quot;, m_name, position);
+}</action>
+      <tran_glyph color="1" conn="6,19,3,-1,14">
+       <action box="1,1,20,2"/>
       </tran_glyph>
      </tran>
      <state_glyph node="6,13,40,12">
@@ -536,9 +559,9 @@ SendMoveEvent(newPosition);                    </action>
       <action>// Received event from motor
 int16_t position = Q_EVT_CAST(MovedEvt)-&gt;position;
 m_currentPosition = position;
-consoleDisplayArgs(&quot;MotionMgr: motor position = %d\r\n&quot;, position);</action>
-      <tran_glyph color="1" conn="33,41,0,2,-16">
-       <action box="1,-11,10,2"/>
+consoleDisplayArgs(&quot;%s: motor position = %d\r\n&quot;, m_name, position);</action>
+      <tran_glyph color="1" conn="34,41,0,2,-16">
+       <action box="0,-11,10,2"/>
       </tran_glyph>
      </tran>
      <!--${AOs::MotionMgr::SM::moving::MOVE_ERROR}-->
@@ -547,10 +570,10 @@ consoleDisplayArgs(&quot;MotionMgr: motor position = %d\r\n&quot;, position);</a
 int16_t position = Q_EVT_CAST(MoveErrorEvt)-&gt;position;
 uint8_t error = Q_EVT_CAST(MoveErrorEvt)-&gt;error;
 m_currentPosition = position;
-consoleDisplayArgs(&quot;MotionMgr: motor position = %d, error = %d\r\n&quot;,
-                    position, error);</action>
+consoleDisplayArgs(&quot;%s: motor position = %d, error = %d\r\n&quot;,
+                    m_name, position, error);</action>
       <tran_glyph conn="42,41,0,2,-16">
-       <action box="1,-6,13,2"/>
+       <action box="0,-7,13,2"/>
       </tran_glyph>
      </tran>
      <state_glyph color="2" node="6,41,40,13"/>

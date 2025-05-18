@@ -54,6 +54,7 @@ public:
     std::int16_t m_motorIncrement;
     std::int8_t m_knobPosition;
     QP::QActive * m_AO_Client;
+    static const char* m_name;
 
 private:
     void SendMoveEvent(uint16_t position);
@@ -61,6 +62,7 @@ private:
 
 public:
     MotionMgr();
+    void ChangeKnobPosition(std::uint8_t knobPosition);
 
 protected:
     Q_STATE_DECL(initial);

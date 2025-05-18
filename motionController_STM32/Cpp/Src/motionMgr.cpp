@@ -62,6 +62,8 @@ namespace APP {
 
 //${AOs::MotionMgr} ..........................................................
 MotionMgr MotionMgr::inst;
+const char* MotionMgr::m_name = "MotionMgr";
+
 
 //${AOs::MotionMgr::SendMoveEvent} ...........................................
 void MotionMgr::SendMoveEvent(uint16_t position) {
@@ -90,12 +92,27 @@ MotionMgr::MotionMgr()
     m_knobPosition = 0;
 }
 
+//${AOs::MotionMgr::ChangeKnobPosition} ......................................
+void MotionMgr::ChangeKnobPosition(std::uint8_t knobPosition) {
+    // Knob position changed, determine new motor position
+    int knobIncrement = knobPosition - m_knobPosition;
+    int positionIncrement = knobIncrement * m_motorIncrement;
+    int newPosition = m_currentPosition + positionIncrement;
+
+    m_requestPosition = newPosition;
+    consoleDisplayArgs("\r\n%s: knob position = %d\r\n", m_name, knobPosition);
+    consoleDisplayArgs("%s: requested motor position = %d\r\n", m_name, newPosition);
+    m_knobPosition = knobPosition;
+
+    SendMoveEvent(newPosition);
+}
+
 //${AOs::MotionMgr::SM} ......................................................
 Q_STATE_DEF(MotionMgr, initial) {
     //${AOs::MotionMgr::SM::initial}
     //(void)par; // unused parameter
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
-    consoleDisplay("MotionMgr: starting\r\n");
+    consoleDisplayArgs("%s: starting\r\n", m_name);
     return tran(&idle);
 }
 
@@ -105,14 +122,14 @@ Q_STATE_DEF(MotionMgr, idle) {
     switch (e->sig) {
         //${AOs::MotionMgr::SM::idle}
         case Q_ENTRY_SIG: {
-            consoleDisplay("MotionMgr: idle\r\n");
+            consoleDisplayArgs("%s: idle\r\n", m_name);
             status_ = Q_RET_HANDLED;
             break;
         }
         //${AOs::MotionMgr::SM::idle::HOME}
         case HOME_SIG: {
             // Send HOME event to initialize system
-            consoleDisplay("MotionMgr: homing motor\r\n");
+            consoleDisplayArgs("%s: homing motor\r\n", m_name);
             SendFindLimitEvent();
             status_ = tran(&moving);
             break;
@@ -124,22 +141,24 @@ Q_STATE_DEF(MotionMgr, idle) {
             int8_t knobPosition = Q_EVT_CAST(KnobEvt)->position;
             //${AOs::MotionMgr::SM::idle::KNOB::[KnobChanged]}
             if (knobPosition != m_knobPosition) {
-                // Knob position changed, determine new motor position
-                int knobIncrement = knobPosition - m_knobPosition;
-                int positionIncrement = knobIncrement * m_motorIncrement;
-                int newPosition = m_currentPosition + positionIncrement;
-
-                m_requestPosition = newPosition;
-                consoleDisplayArgs("MotionMgr: knob position = %d\r\n", knobPosition);
-                consoleDisplayArgs("MotionMgr: requested motor position = %d\r\n", newPosition);
-                m_knobPosition = knobPosition;
-
-                SendMoveEvent(newPosition);
+                ChangeKnobPosition(knobPosition);
                 status_ = tran(&moving);
             }
             else {
                 status_ = Q_RET_UNHANDLED;
             }
+            break;
+        }
+        //${AOs::MotionMgr::SM::idle::MOVED}
+        case MOVED_SIG: {
+            int16_t position = Q_EVT_CAST(MovedEvt)->position;
+
+            if ( m_currentPosition != position )
+            {
+                m_currentPosition = position;
+                consoleDisplayArgs("%s: motor position = %d\r\n", m_name, position);
+            }
+            status_ = Q_RET_HANDLED;
             break;
         }
         default: {
@@ -159,7 +178,7 @@ Q_STATE_DEF(MotionMgr, moving) {
             // Received event from motor
             int16_t position = Q_EVT_CAST(MovedEvt)->position;
             m_currentPosition = position;
-            consoleDisplayArgs("MotionMgr: motor position = %d\r\n", position);
+            consoleDisplayArgs("%s: motor position = %d\r\n", m_name, position);
             status_ = tran(&idle);
             break;
         }
@@ -169,8 +188,8 @@ Q_STATE_DEF(MotionMgr, moving) {
             int16_t position = Q_EVT_CAST(MoveErrorEvt)->position;
             uint8_t error = Q_EVT_CAST(MoveErrorEvt)->error;
             m_currentPosition = position;
-            consoleDisplayArgs("MotionMgr: motor position = %d, error = %d\r\n",
-                                position, error);
+            consoleDisplayArgs("%s: motor position = %d, error = %d\r\n",
+                                m_name, position, error);
             status_ = tran(&idle);
             break;
         }

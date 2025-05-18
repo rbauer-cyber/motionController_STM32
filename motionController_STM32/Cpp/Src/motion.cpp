@@ -82,7 +82,7 @@ uint8_t BSP_readKnob(void)
     if (newPosition != s_encoderPosition)
     {
         char direction = (newPosition > s_encoderPosition) ? 'R' : 'L';
-        consoleDisplayArgs("Knob: %c%d\r\n", direction, newPosition);
+        consoleDisplayArgs("\r\nKnob: %c%d\r\n", direction, newPosition);
         s_encoderPosition = newPosition;
     }
 
