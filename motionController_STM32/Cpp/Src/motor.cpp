@@ -170,6 +170,17 @@ Q_STATE_DEF(Motor, MotionReady) {
         case SHOW_STATE_SIG: {
             consoleDisplayArgs("Motor: position: %d, moving: %d, limit: %d\r\n",
                 m_position, m_moving, m_atLimitSwitch);
+
+            //#ifdef POSITION_EVT
+            #if 1
+            PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+            myEvt->position = m_position;
+            QP::QActive::PUBLISH(myEvt, this);
+            #else
+            CustomEvt *myEvt = Q_NEW(CustomEvt, CUSTOM_SIG);
+            myEvt->sigType = POSITION_SIG;
+            QP::QActive::PUBLISH(myEvt, this);
+            #endif
             status_ = Q_RET_HANDLED;
             break;
         }
@@ -267,6 +278,13 @@ Q_STATE_DEF(Motor, Stopped) {
                 m_findingLimit = 0;
                 m_moving = 0;
             }
+
+            //#ifdef POSITION_EVT
+            #if 1
+            PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+            myEvt->position = m_position;
+            QP::QActive::PUBLISH(myEvt, this);
+            #endif
             status_ = Q_RET_HANDLED;
             break;
         }

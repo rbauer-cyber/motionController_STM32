@@ -40,14 +40,18 @@
 
 #define USE_PUBLISH
 
+#include "terminal.hpp"
+
 //$declare${Shared} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace APP {
 
 //${Shared::MotSignals} ......................................................
 enum MotSignals : QP::QSignal {
     MOVE_TIME_SIG = QP::Q_USER_SIG,
+    MOT_CUSTOM_SIG,
     UPDATE_TIME_SIG,
     SHOW_STATE_SIG,
+    POSITION_SIG,
     MAX_PUB_SIG,
     MOVE_SIG,
     FIND_LIMIT_SIG,
@@ -169,6 +173,31 @@ public:
 
 //${Shared::AO_TerminalMot} ..................................................
 extern QP::QActive * const AO_TerminalMot;
+
+//${Shared::AOType} ..........................................................
+enum AOType {
+    AO_KNOB,
+    AO_MOTOR,
+    AO_SWITCH,
+};
+
+//${Shared::CustomSignals} ...................................................
+enum CustomSignals {
+    POSITION,
+    ERROR
+};
+
+//${Shared::PositionEvt} .....................................................
+class PositionEvt : public APP::CustomEvt {
+public:
+    std::int16_t position;
+
+public:
+    constexpr PositionEvt(std::int16_t newPosition)
+     : CustomEvt(CUSTOM_SIG, POSITION_SIG),
+       position(newPosition)
+    {}
+}; // class PositionEvt
 
 } // namespace APP
 //$enddecl${Shared} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

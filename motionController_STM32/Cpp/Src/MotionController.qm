@@ -35,8 +35,10 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
   <attribute name="MotSignals" type="enum" visibility="0x04" properties="0x00">
    <code>: QP::QSignal {
     MOVE_TIME_SIG = QP::Q_USER_SIG,
+    MOT_CUSTOM_SIG,
     UPDATE_TIME_SIG,
     SHOW_STATE_SIG,
+    POSITION_SIG,
     MAX_PUB_SIG,
     MOVE_SIG,
     FIND_LIMIT_SIG,
@@ -167,6 +169,33 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
   <attribute name="AO_TerminalMot" type="QP::QActive * const" visibility="0x00" properties="0x00">
    <code>= &amp;TerminalMot::inst;</code>
   </attribute>
+  <!--${Shared::AOType}-->
+  <attribute name="AOType" type="enum" visibility="0x04" properties="0x00">
+   <code>{
+    AO_KNOB,
+    AO_MOTOR,
+    AO_SWITCH,
+};</code>
+  </attribute>
+  <!--${Shared::CustomSignals}-->
+  <attribute name="CustomSignals" type="enum" visibility="0x04" properties="0x00">
+   <code>{
+    POSITION,
+    ERROR
+};</code>
+  </attribute>
+  <!--${Shared::PositionEvt}-->
+  <class name="PositionEvt" superclass="BaseShared::CustomEvt">
+   <!--${Shared::PositionEvt::position}-->
+   <attribute name="position" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::PositionEvt::PositionEvt}-->
+   <operation name="PositionEvt" type="constexpr" visibility="0x00" properties="0x02">
+    <!--${Shared::PositionEvt::PositionEvt::newPosition}-->
+    <parameter name="newPosition" type="std::int16_t"/>
+    <code> : CustomEvt(CUSTOM_SIG, POSITION_SIG),
+   position(newPosition)</code>
+   </operation>
+  </class>
  </package>
  <!--${AOs}-->
  <package name="AOs" stereotype="0x02" namespace="APP::">
@@ -297,7 +326,18 @@ else if ( switchState == 1 ) {
      <!--${AOs::Motor::SM::MotionReady::SHOW_STATE}-->
      <tran trig="SHOW_STATE">
       <action>consoleDisplayArgs(&quot;Motor: position: %d, moving: %d, limit: %d\r\n&quot;,
-    m_position, m_moving, m_atLimitSwitch);</action>
+    m_position, m_moving, m_atLimitSwitch);
+
+//#ifdef POSITION_EVT
+#if 1
+PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+myEvt-&gt;position = m_position;
+QP::QActive::PUBLISH(myEvt, this);
+#else
+CustomEvt *myEvt = Q_NEW(CustomEvt, CUSTOM_SIG);
+myEvt-&gt;sigType = POSITION_SIG;
+QP::QActive::PUBLISH(myEvt, this);
+#endif</action>
       <tran_glyph conn="67,38,1,-1,-10">
        <action box="-13,-3,12,2"/>
       </tran_glyph>
@@ -384,7 +424,14 @@ else {
 
     m_findingLimit = 0;
     m_moving = 0;
-}</entry>
+}
+
+//#ifdef POSITION_EVT
+#if 1
+PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+myEvt-&gt;position = m_position;
+QP::QActive::PUBLISH(myEvt, this);
+#endif</entry>
       <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT}-->
       <tran trig="MOVE, FIND_LIMIT">
        <action>int16_t newPosition = Q_EVT_CAST(MoveEvt)-&gt;position;
@@ -746,6 +793,8 @@ CreateOneShotTimer(1000);</entry>
    <attribute name="m_lastState" type="std::uint8_t" visibility="0x00" properties="0x00"/>
    <!--${AOs::Switch::m_AO_Client}-->
    <attribute name="m_AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Switch::m_initSystemState}-->
+   <attribute name="m_initSystemState" type="std::int16_t" visibility="0x00" properties="0x00"/>
    <!--${AOs::Switch::CreatePeriodicTimer}-->
    <operation name="CreatePeriodicTimer" type="void" visibility="0x02" properties="0x00">
     <!--${AOs::Switch::CreatePeriodicTi~::time}-->
@@ -796,7 +845,8 @@ return switchChanged;</code>
 
 m_state = 1;
 m_lastState = 1;
-m_notifyCount = 0;</code>
+m_notifyCount = 0;
+m_initSystemState = 10;</code>
    </operation>
    <!--${AOs::Switch::CreateOneShotTimer}-->
    <operation name="CreateOneShotTimer" type="void" visibility="0x02" properties="0x00">
@@ -848,6 +898,12 @@ CreateOneShotTimer(1000);</entry>
 m_state = BSP_readSwitch();
 m_notifyCount += 1;
 
+if ( m_initSystemState-- &gt; 1 )
+{
+    MoveEvt* pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
+    QP::QActive::PUBLISH(pe, this);
+}
+
 CreateOneShotTimer(1000);</entry>
      <!--${AOs::Switch::SM::readSwitch::UPDATE_TIME}-->
      <tran trig="UPDATE_TIME" target="../../1">
@@ -872,9 +928,15 @@ CreateOneShotTimer(1000);</entry>
    <attribute name="m_motorPosition" type="std::uint16_t" visibility="0x00" properties="0x00"/>
    <!--${AOs::TerminalMot::m_knobPosition}-->
    <attribute name="m_knobPosition" type="std::uint16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::TerminalMot::m_name}-->
+   <attribute name="m_name" type="const char*" visibility="0x00" properties="0x01">
+    <code>= &quot;TerminalMot&quot;;</code>
+   </attribute>
    <!--${AOs::TerminalMot::TerminalMot}-->
    <operation name="TerminalMot" type="" visibility="0x00" properties="0x00">
-    <code>  : m_defined(1)</code>
+    <code>  : m_defined(1),
+    m_motorPosition(0),
+    m_knobPosition(0)</code>
    </operation>
    <!--${AOs::TerminalMot::DispatchCommand}-->
    <operation name="DispatchCommand" type="void" visibility="0x00" properties="0x00">
@@ -925,15 +987,8 @@ switch ( command ) {
         break;
     case 'u':
     case 'U':
-#ifndef USE_PUBLISH
-        pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
-        AO_Motor-&gt;POST(pe, this);
-        ke = Q_NEW(KnobEvt, SHOW_STATE_SIG);
-        AO_Knob-&gt;POST(ke, this);
-#else
         pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
         QP::QActive::PUBLISH(pe, this);
-#endif
         break;
     case '+':
         m_motorPosition += 1000;
@@ -956,6 +1011,16 @@ switch ( command ) {
    <!--${AOs::TerminalMot::RotateKnobCCW}-->
    <operation name="RotateKnobCCW" type="void" visibility="0x00" properties="0x00">
     <code>m_knobPosition -= 1;</code>
+   </operation>
+   <!--${AOs::TerminalMot::LoadCustomEvt}-->
+   <operation name="LoadCustomEvt" type="void" visibility="0x00" properties="0x00">
+    <specifiers>override</specifiers>
+    <!--${AOs::TerminalMot::LoadCustomEvt::customEvent}-->
+    <parameter name="customEvent" type="const CustomEvt*"/>
+    <code>const PositionEvt* pe = static_cast&lt;const PositionEvt*&gt;(customEvent);
+int16_t newPosition = pe-&gt;position;
+m_motorPosition = newPosition;
+consoleDisplayArgs(&quot;%s: received custom sig, position = %d\r\n&quot;, m_name, newPosition);</code>
    </operation>
   </class>
  </package>
@@ -1001,6 +1066,8 @@ void ledOff();
 
 #define USE_PUBLISH
 
+#include &quot;terminal.hpp&quot;
+
 $declare ${Shared}
 
 #endif //COMMON_H</text>
@@ -1013,6 +1080,8 @@ $declare ${Shared}
 #include &lt;cstdint&gt;
 
 #include &quot;qpcpp.hpp&quot;             // QP/C++ real-time embedded framework
+
+//#define POSITION_EVT
 
 $declare ${AOs::Motor}
 
@@ -1400,6 +1469,7 @@ int bspMain() {
 #include &quot;common.hpp&quot;            // DPP Application interface
 #include &quot;terminal.hpp&quot;          // Base class for TerminalDpp 
 #include &quot;bsp.hpp&quot;               // Board Support Package
+#include &quot;console.h&quot;
 
 $declare ${AOs::TerminalMot}
 

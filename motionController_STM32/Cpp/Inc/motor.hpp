@@ -42,6 +42,8 @@
 
 #include "qpcpp.hpp"             // QP/C++ real-time embedded framework
 
+//#define POSITION_EVT
+
 //$declare${AOs::Motor} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace APP {
 

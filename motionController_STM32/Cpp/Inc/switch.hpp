@@ -58,6 +58,7 @@ public:
     std::uint16_t m_notifyCount= 0;
     std::uint8_t m_lastState;
     QP::QActive * m_AO_Client;
+    std::int16_t m_initSystemState;
 
 private:
     void CreatePeriodicTimer(uint32_t time);

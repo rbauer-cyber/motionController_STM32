@@ -115,6 +115,7 @@ Switch::Switch()
     m_state = 1;
     m_lastState = 1;
     m_notifyCount = 0;
+    m_initSystemState = 10;
 }
 
 //${AOs::Switch::CreateOneShotTimer} .........................................
@@ -176,6 +177,12 @@ Q_STATE_DEF(Switch, readSwitch) {
             // Read and store state of switch for debouncing in Idle.
             m_state = BSP_readSwitch();
             m_notifyCount += 1;
+
+            if ( m_initSystemState-- > 1 )
+            {
+                MoveEvt* pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
+                QP::QActive::PUBLISH(pe, this);
+            }
 
             CreateOneShotTimer(1000);
             status_ = Q_RET_HANDLED;

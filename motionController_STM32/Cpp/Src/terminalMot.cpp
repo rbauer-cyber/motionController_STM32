@@ -39,6 +39,7 @@
 #include "common.hpp"            // DPP Application interface
 #include "terminal.hpp"          // Base class for TerminalDpp
 #include "bsp.hpp"               // Board Support Package
+#include "console.h"
 
 //$declare${AOs::TerminalMot} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace APP {
@@ -50,12 +51,14 @@ public:
     int m_defined;
     std::uint16_t m_motorPosition;
     std::uint16_t m_knobPosition;
+    static const char* m_name;
 
 public:
     TerminalMot();
     void DispatchCommand(char command) override;
     void RotateKnobCW();
     void RotateKnobCCW();
+    void LoadCustomEvt(const CustomEvt* customEvent) override;
 }; // class TerminalMot
 
 } // namespace APP
@@ -81,10 +84,14 @@ namespace APP {
 
 //${AOs::TerminalMot} ........................................................
 TerminalMot TerminalMot::inst;
+const char* TerminalMot::m_name = "TerminalMot";
+
 
 //${AOs::TerminalMot::TerminalMot} ...........................................
 TerminalMot::TerminalMot()
-  : m_defined(1)
+  : m_defined(1),
+    m_motorPosition(0),
+    m_knobPosition(0)
 {}
 
 //${AOs::TerminalMot::DispatchCommand} .......................................
@@ -133,15 +140,8 @@ void TerminalMot::DispatchCommand(char command) {
             break;
         case 'u':
         case 'U':
-    #ifndef USE_PUBLISH
-            pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
-            AO_Motor->POST(pe, this);
-            ke = Q_NEW(KnobEvt, SHOW_STATE_SIG);
-            AO_Knob->POST(ke, this);
-    #else
             pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
             QP::QActive::PUBLISH(pe, this);
-    #endif
             break;
         case '+':
             m_motorPosition += 1000;
@@ -166,6 +166,14 @@ void TerminalMot::RotateKnobCW() {
 //${AOs::TerminalMot::RotateKnobCCW} .........................................
 void TerminalMot::RotateKnobCCW() {
     m_knobPosition -= 1;
+}
+
+//${AOs::TerminalMot::LoadCustomEvt} .........................................
+void TerminalMot::LoadCustomEvt(const CustomEvt* customEvent) {
+    const PositionEvt* pe = static_cast<const PositionEvt*>(customEvent);
+    int16_t newPosition = pe->position;
+    m_motorPosition = newPosition;
+    consoleDisplayArgs("%s: received custom sig, position = %d\r\n", m_name, newPosition);
 }
 
 } // namespace APP
