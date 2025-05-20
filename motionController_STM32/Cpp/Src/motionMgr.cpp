@@ -84,7 +84,8 @@ void MotionMgr::SendFindLimitEvent() {
 
 //${AOs::MotionMgr::MotionMgr} ...............................................
 MotionMgr::MotionMgr()
-  : QActive(Q_STATE_CAST(&initial))
+  : QActive(Q_STATE_CAST(&initial)),
+    m_timeEvt(this, UPDATE_TIME_SIG, 0U)
 {
     m_requestPosition = 0;
     m_currentPosition = 0;
@@ -112,6 +113,14 @@ void MotionMgr::PublishShowStateEvent() {
     // Cause system to broadcast state
     MoveEvt* pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
     QP::QActive::PUBLISH(pe, this);
+}
+
+//${AOs::MotionMgr::CreateOneShotTimer} ......................................
+void MotionMgr::CreateOneShotTimer(uint32_t time) {
+    // Create one shot timer
+    //QTimeEvt_ctorX(&me->timeEvt, &me->super, MOVE_TIME_SIG, 0U);
+    //QTimeEvt_armX(&me->timeEvt, time, 0);
+    m_timeEvt.armX(time, 0U);
 }
 
 //${AOs::MotionMgr::SM} ......................................................
@@ -170,9 +179,9 @@ Q_STATE_DEF(MotionMgr, idle) {
         }
         //${AOs::MotionMgr::SM::idle::SYNC}
         case SYNC_SIG: {
-            consoleDisplayArgs("%s: Sync system\r\n", m_name);
-            PublishShowStateEvent();
-            status_ = tran(&idle);
+            //consoleDisplayArgs("%s: Sync system\r\n", m_name);
+            //PublishShowStateEvent();
+            status_ = tran(&SyncSystem);
             break;
         }
         default: {
@@ -204,6 +213,32 @@ Q_STATE_DEF(MotionMgr, moving) {
             m_currentPosition = position;
             consoleDisplayArgs("%s: motor position = %d, error = %d\r\n",
                                 m_name, position, error);
+            status_ = tran(&idle);
+            break;
+        }
+        default: {
+            status_ = super(&top);
+            break;
+        }
+    }
+    return status_;
+}
+
+//${AOs::MotionMgr::SM::SyncSystem} ..........................................
+Q_STATE_DEF(MotionMgr, SyncSystem) {
+    QP::QState status_;
+    switch (e->sig) {
+        //${AOs::MotionMgr::SM::SyncSystem}
+        case Q_ENTRY_SIG: {
+            //consoleDisplayArgs("%s: syncing system\r\n", m_name);
+            CreateOneShotTimer(1000);
+            status_ = Q_RET_HANDLED;
+            break;
+        }
+        //${AOs::MotionMgr::SM::SyncSystem::UPDATE_TIME}
+        case UPDATE_TIME_SIG: {
+            //consoleDisplayArgs("%s: Publish state\r\n", m_name);
+            PublishShowStateEvent();
             status_ = tran(&idle);
             break;
         }

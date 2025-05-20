@@ -57,6 +57,9 @@ public:
     static const char* m_name;
 
 private:
+    QP::QTimeEvt m_timeEvt;
+
+private:
     void SendMoveEvent(uint16_t position);
     void SendFindLimitEvent();
 
@@ -66,11 +69,13 @@ public:
 
 private:
     void PublishShowStateEvent();
+    void CreateOneShotTimer(uint32_t time);
 
 protected:
     Q_STATE_DECL(initial);
     Q_STATE_DECL(idle);
     Q_STATE_DECL(moving);
+    Q_STATE_DECL(SyncSystem);
 }; // class MotionMgr
 
 } // namespace APP

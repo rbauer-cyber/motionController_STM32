@@ -291,6 +291,14 @@ m_atLimitSwitch = 0;
 m_findingLimit = 0;
 m_moving = 0;</code>
    </operation>
+   <!--${AOs::Motor::PublishPositionEvent}-->
+   <operation name="PublishPositionEvent" type="void" visibility="0x02" properties="0x00">
+    <code>// Publish position of motor
+PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+myEvt-&gt;position = m_position;
+myEvt-&gt;device = AO_MOTOR;
+QP::QActive::PUBLISH(myEvt, this);</code>
+   </operation>
    <!--${AOs::Motor::SM}-->
    <statechart properties="0x01">
     <documentation>Motor state machine</documentation>
@@ -334,17 +342,7 @@ else if ( switchState == 1 ) {
       <action>consoleDisplayArgs(&quot;Motor: position: %d, moving: %d, limit: %d\r\n&quot;,
     m_position, m_moving, m_atLimitSwitch);
 
-//#ifdef POSITION_EVT
-#if 1
-PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
-myEvt-&gt;position = m_position;
-myEvt-&gt;device = AO_MOTOR;
-QP::QActive::PUBLISH(myEvt, this);
-#else
-CustomEvt *myEvt = Q_NEW(CustomEvt, CUSTOM_SIG);
-myEvt-&gt;sigType = POSITION_SIG;
-QP::QActive::PUBLISH(myEvt, this);
-#endif</action>
+PublishPositionEvent();</action>
       <tran_glyph conn="67,38,1,-1,-10">
        <action box="-13,-3,12,2"/>
       </tran_glyph>
@@ -507,6 +505,8 @@ else {
    <attribute name="m_name" type="const char*" visibility="0x00" properties="0x01">
     <code>= &quot;MotionMgr&quot;;</code>
    </attribute>
+   <!--${AOs::MotionMgr::m_timeEvt}-->
+   <attribute name="m_timeEvt" type="QP::QTimeEvt" visibility="0x02" properties="0x00"/>
    <!--${AOs::MotionMgr::SendMoveEvent}-->
    <operation name="SendMoveEvent" type="void" visibility="0x02" properties="0x00">
     <!--${AOs::MotionMgr::SendMoveEvent::position}-->
@@ -526,7 +526,8 @@ m_AO_Client-&gt;POST(myEvt, this);</code>
    </operation>
    <!--${AOs::MotionMgr::MotionMgr}-->
    <operation name="MotionMgr" type="" visibility="0x00" properties="0x00">
-    <code>  : QActive(Q_STATE_CAST(&amp;initial))
+    <code>  : QActive(Q_STATE_CAST(&amp;initial)),
+    m_timeEvt(this, UPDATE_TIME_SIG, 0U)
 
 m_requestPosition = 0;
 m_currentPosition = 0;
@@ -554,6 +555,15 @@ SendMoveEvent(newPosition);</code>
     <code>// Cause system to broadcast state
 MoveEvt* pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
 QP::QActive::PUBLISH(pe, this);</code>
+   </operation>
+   <!--${AOs::MotionMgr::CreateOneShotTimer}-->
+   <operation name="CreateOneShotTimer" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::MotionMgr::CreateOneShotTim~::time}-->
+    <parameter name="time" type="uint32_t"/>
+    <code>// Create one shot timer
+//QTimeEvt_ctorX(&amp;me-&gt;timeEvt, &amp;me-&gt;super, MOVE_TIME_SIG, 0U);
+//QTimeEvt_armX(&amp;me-&gt;timeEvt, time, 0);
+m_timeEvt.armX(time, 0U);</code>
    </operation>
    <!--${AOs::MotionMgr::SM}-->
    <statechart properties="0x01">
@@ -610,11 +620,11 @@ if ( m_currentPosition != position )
       </tran_glyph>
      </tran>
      <!--${AOs::MotionMgr::SM::idle::SYNC}-->
-     <tran trig="SYNC" target="..">
-      <action brief="Update System State">consoleDisplayArgs(&quot;%s: Sync system\r\n&quot;, m_name);
-PublishShowStateEvent();</action>
-      <tran_glyph color="1" conn="34,13,0,0,-4,6,4">
-       <action box="-4,-7,23,2"/>
+     <tran trig="SYNC" target="../../3">
+      <action brief="Update System State">//consoleDisplayArgs(&quot;%s: Sync system\r\n&quot;, m_name);
+//PublishShowStateEvent();</action>
+      <tran_glyph color="1" conn="46,16,1,3,19">
+       <action box="1,-3,23,2"/>
       </tran_glyph>
      </tran>
      <state_glyph node="6,13,40,12">
@@ -645,9 +655,25 @@ consoleDisplayArgs(&quot;%s: motor position = %d, error = %d\r\n&quot;,
        <action box="0,-7,13,2"/>
       </tran_glyph>
      </tran>
-     <state_glyph color="2" node="6,41,40,13"/>
+     <state_glyph color="2" node="6,41,40,12"/>
     </state>
-    <state_diagram size="62,57"/>
+    <!--${AOs::MotionMgr::SM::SyncSystem}-->
+    <state name="SyncSystem">
+     <entry>//consoleDisplayArgs(&quot;%s: syncing system\r\n&quot;, m_name);
+CreateOneShotTimer(1000);</entry>
+     <!--${AOs::MotionMgr::SM::SyncSystem::UPDATE_TIME}-->
+     <tran trig="UPDATE_TIME" target="../../1">
+      <action>//consoleDisplayArgs(&quot;%s: Publish state\r\n&quot;, m_name);
+PublishShowStateEvent();</action>
+      <tran_glyph color="1" conn="65,21,3,1,-19">
+       <action box="-15,-2,14,2"/>
+      </tran_glyph>
+     </tran>
+     <state_glyph node="65,13,25,12">
+      <entry box="0,3,6,2"/>
+     </state_glyph>
+    </state>
+    <state_diagram size="96,58"/>
    </statechart>
   </class>
   <!--${AOs::Knob}-->
@@ -720,6 +746,14 @@ m_timeEvt.armX(time, 0);</code>
 //QTimeEvt_armX(&amp;me-&gt;timeEvt, time, time);
 m_timeEvt.disarm();</code>
    </operation>
+   <!--${AOs::Knob::PublishPositionEvent}-->
+   <operation name="PublishPositionEvent" type="void" visibility="0x02" properties="0x00">
+    <code>// Publish position of knob
+PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+myEvt-&gt;position = m_position;
+myEvt-&gt;device = AO_KNOB;
+QP::QActive::PUBLISH(myEvt, this);</code>
+   </operation>
    <!--${AOs::Knob::SM}-->
    <statechart properties="0x01">
     <documentation>Knob state machine</documentation>
@@ -749,7 +783,8 @@ BSP_setPositionKnob(knobPosition);</action>
      </tran>
      <!--${AOs::Knob::SM::running::SHOW_STATE}-->
      <tran trig="SHOW_STATE">
-      <action>consoleDisplayArgs(&quot;Knob: position: %d\r\n&quot;, m_position);</action>
+      <action>consoleDisplayArgs(&quot;Knob: position: %d\r\n&quot;, m_position);
+PublishPositionEvent();</action>
       <tran_glyph color="1" conn="46,49,2,-1,-11">
        <action box="-5,-7,13,2"/>
       </tran_glyph>
@@ -1050,10 +1085,18 @@ switch ( command ) {
     <code>const PositionEvt* pe = static_cast&lt;const PositionEvt*&gt;(customEvent);
 int16_t position = pe-&gt;position;
 int16_t device = pe-&gt;device;
-m_motorPosition = position;
 
-consoleDisplayArgs(&quot;%s: received custom sig, position = %d, device = %d\r\n&quot;,
-    m_name, position, device);</code>
+if ( device == AO_MOTOR )
+{
+    m_motorPosition = position;
+}
+else if ( device == AO_KNOB )
+{
+    m_knobPosition = position;
+}
+
+//consoleDisplayArgs(&quot;%s: received custom sig, position = %d, device = %d\r\n&quot;,
+//    m_name, position, device);</code>
    </operation>
   </class>
  </package>

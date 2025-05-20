@@ -70,6 +70,7 @@ public:
 private:
     void CreateOneShotTimer(uint32_t time);
     void StopTimer();
+    void PublishPositionEvent();
 
 protected:
     Q_STATE_DECL(initial);

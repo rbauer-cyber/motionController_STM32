@@ -131,6 +131,15 @@ Motor::Motor()
     m_moving = 0;
 }
 
+//${AOs::Motor::PublishPositionEvent} ........................................
+void Motor::PublishPositionEvent() {
+    // Publish position of motor
+    PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+    myEvt->position = m_position;
+    myEvt->device = AO_MOTOR;
+    QP::QActive::PUBLISH(myEvt, this);
+}
+
 //${AOs::Motor::SM} ..........................................................
 Q_STATE_DEF(Motor, initial) {
     //${AOs::Motor::SM::initial}
@@ -171,17 +180,7 @@ Q_STATE_DEF(Motor, MotionReady) {
             consoleDisplayArgs("Motor: position: %d, moving: %d, limit: %d\r\n",
                 m_position, m_moving, m_atLimitSwitch);
 
-            //#ifdef POSITION_EVT
-            #if 1
-            PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
-            myEvt->position = m_position;
-            myEvt->device = AO_MOTOR;
-            QP::QActive::PUBLISH(myEvt, this);
-            #else
-            CustomEvt *myEvt = Q_NEW(CustomEvt, CUSTOM_SIG);
-            myEvt->sigType = POSITION_SIG;
-            QP::QActive::PUBLISH(myEvt, this);
-            #endif
+            PublishPositionEvent();
             status_ = Q_RET_HANDLED;
             break;
         }

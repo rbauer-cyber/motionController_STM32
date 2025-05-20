@@ -78,6 +78,9 @@ private:
 public:
     Motor();
 
+private:
+    void PublishPositionEvent();
+
 protected:
     Q_STATE_DECL(initial);
     Q_STATE_DECL(MotionReady);

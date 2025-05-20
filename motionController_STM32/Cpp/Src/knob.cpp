@@ -122,6 +122,15 @@ void Knob::StopTimer() {
     m_timeEvt.disarm();
 }
 
+//${AOs::Knob::PublishPositionEvent} .........................................
+void Knob::PublishPositionEvent() {
+    // Publish position of knob
+    PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+    myEvt->position = m_position;
+    myEvt->device = AO_KNOB;
+    QP::QActive::PUBLISH(myEvt, this);
+}
+
 //${AOs::Knob::SM} ...........................................................
 Q_STATE_DEF(Knob, initial) {
     //${AOs::Knob::SM::initial}
@@ -150,6 +159,7 @@ Q_STATE_DEF(Knob, running) {
         //${AOs::Knob::SM::running::SHOW_STATE}
         case SHOW_STATE_SIG: {
             consoleDisplayArgs("Knob: position: %d\r\n", m_position);
+            PublishPositionEvent();
             status_ = Q_RET_HANDLED;
             break;
         }

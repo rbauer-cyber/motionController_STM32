@@ -180,10 +180,18 @@ void TerminalMot::LoadCustomEvt(const CustomEvt* customEvent) {
     const PositionEvt* pe = static_cast<const PositionEvt*>(customEvent);
     int16_t position = pe->position;
     int16_t device = pe->device;
-    m_motorPosition = position;
 
-    consoleDisplayArgs("%s: received custom sig, position = %d, device = %d\r\n",
-        m_name, position, device);
+    if ( device == AO_MOTOR )
+    {
+        m_motorPosition = position;
+    }
+    else if ( device == AO_KNOB )
+    {
+        m_knobPosition = position;
+    }
+
+    //consoleDisplayArgs("%s: received custom sig, position = %d, device = %d\r\n",
+    //    m_name, position, device);
 }
 
 } // namespace APP
