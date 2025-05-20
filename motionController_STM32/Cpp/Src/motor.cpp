@@ -175,6 +175,7 @@ Q_STATE_DEF(Motor, MotionReady) {
             #if 1
             PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
             myEvt->position = m_position;
+            myEvt->device = AO_MOTOR;
             QP::QActive::PUBLISH(myEvt, this);
             #else
             CustomEvt *myEvt = Q_NEW(CustomEvt, CUSTOM_SIG);
@@ -283,6 +284,7 @@ Q_STATE_DEF(Motor, Stopped) {
             #if 1
             PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
             myEvt->position = m_position;
+            myEvt->device = AO_MOTOR;
             QP::QActive::PUBLISH(myEvt, this);
             #endif
             status_ = Q_RET_HANDLED;

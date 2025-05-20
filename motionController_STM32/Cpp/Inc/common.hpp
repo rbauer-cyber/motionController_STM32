@@ -53,6 +53,7 @@ enum MotSignals : QP::QSignal {
     SHOW_STATE_SIG,
     POSITION_SIG,
     MAX_PUB_SIG,
+    SYNC_SIG,
     MOVE_SIG,
     FIND_LIMIT_SIG,
     HOME_SIG,
@@ -191,11 +192,15 @@ enum CustomSignals {
 class PositionEvt : public APP::CustomEvt {
 public:
     std::int16_t position;
+    std::int16_t device;
 
 public:
-    constexpr PositionEvt(std::int16_t newPosition)
+    constexpr PositionEvt(
+        std::int16_t thePosition,
+        std::int16_t theDevice)
      : CustomEvt(CUSTOM_SIG, POSITION_SIG),
-       position(newPosition)
+       position(thePosition),
+       device(theDevice)
     {}
 }; // class PositionEvt
 

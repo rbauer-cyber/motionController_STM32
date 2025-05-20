@@ -40,6 +40,7 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
     SHOW_STATE_SIG,
     POSITION_SIG,
     MAX_PUB_SIG,
+    SYNC_SIG,
     MOVE_SIG,
     FIND_LIMIT_SIG,
     HOME_SIG,
@@ -188,12 +189,17 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
   <class name="PositionEvt" superclass="BaseShared::CustomEvt">
    <!--${Shared::PositionEvt::position}-->
    <attribute name="position" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::PositionEvt::device}-->
+   <attribute name="device" type="std::int16_t" visibility="0x00" properties="0x00"/>
    <!--${Shared::PositionEvt::PositionEvt}-->
    <operation name="PositionEvt" type="constexpr" visibility="0x00" properties="0x02">
-    <!--${Shared::PositionEvt::PositionEvt::newPosition}-->
-    <parameter name="newPosition" type="std::int16_t"/>
+    <!--${Shared::PositionEvt::PositionEvt::thePosition}-->
+    <parameter name="thePosition" type="std::int16_t"/>
+    <!--${Shared::PositionEvt::PositionEvt::theDevice}-->
+    <parameter name="theDevice" type="std::int16_t"/>
     <code> : CustomEvt(CUSTOM_SIG, POSITION_SIG),
-   position(newPosition)</code>
+   position(thePosition),
+   device(theDevice)</code>
    </operation>
   </class>
  </package>
@@ -332,6 +338,7 @@ else if ( switchState == 1 ) {
 #if 1
 PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
 myEvt-&gt;position = m_position;
+myEvt-&gt;device = AO_MOTOR;
 QP::QActive::PUBLISH(myEvt, this);
 #else
 CustomEvt *myEvt = Q_NEW(CustomEvt, CUSTOM_SIG);
@@ -430,6 +437,7 @@ else {
 #if 1
 PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
 myEvt-&gt;position = m_position;
+myEvt-&gt;device = AO_MOTOR;
 QP::QActive::PUBLISH(myEvt, this);
 #endif</entry>
       <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT}-->
@@ -541,6 +549,12 @@ m_knobPosition = knobPosition;
 
 SendMoveEvent(newPosition);</code>
    </operation>
+   <!--${AOs::MotionMgr::PublishShowStateEvent}-->
+   <operation name="PublishShowStateEvent" type="void" visibility="0x02" properties="0x00">
+    <code>// Cause system to broadcast state
+MoveEvt* pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
+QP::QActive::PUBLISH(pe, this);</code>
+   </operation>
    <!--${AOs::MotionMgr::SM}-->
    <statechart properties="0x01">
     <documentation>MotionMgr state machine</documentation>
@@ -593,6 +607,14 @@ if ( m_currentPosition != position )
 }</action>
       <tran_glyph color="1" conn="6,19,3,-1,14">
        <action box="1,1,20,2"/>
+      </tran_glyph>
+     </tran>
+     <!--${AOs::MotionMgr::SM::idle::SYNC}-->
+     <tran trig="SYNC" target="..">
+      <action brief="Update System State">consoleDisplayArgs(&quot;%s: Sync system\r\n&quot;, m_name);
+PublishShowStateEvent();</action>
+      <tran_glyph color="1" conn="34,13,0,0,-4,6,4">
+       <action box="-4,-7,23,2"/>
       </tran_glyph>
      </tran>
      <state_glyph node="6,13,40,12">
@@ -898,12 +920,13 @@ CreateOneShotTimer(1000);</entry>
 m_state = BSP_readSwitch();
 m_notifyCount += 1;
 
+#if 0
 if ( m_initSystemState-- &gt; 1 )
 {
     MoveEvt* pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
     QP::QActive::PUBLISH(pe, this);
 }
-
+#endif
 CreateOneShotTimer(1000);</entry>
      <!--${AOs::Switch::SM::readSwitch::UPDATE_TIME}-->
      <tran trig="UPDATE_TIME" target="../../1">
@@ -987,8 +1010,15 @@ switch ( command ) {
         break;
     case 'u':
     case 'U':
+#if 0
         pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
         QP::QActive::PUBLISH(pe, this);
+#endif
+        consoleDisplayArgs(&quot;%s: motor = %d, knob = %d\r\n&quot;,
+            m_name, m_motorPosition, m_knobPosition );
+
+        pe = Q_NEW(MoveEvt, SYNC_SIG);
+        AO_MotionMgr-&gt;POST(pe, this);
         break;
     case '+':
         m_motorPosition += 1000;
@@ -1018,14 +1048,17 @@ switch ( command ) {
     <!--${AOs::TerminalMot::LoadCustomEvt::customEvent}-->
     <parameter name="customEvent" type="const CustomEvt*"/>
     <code>const PositionEvt* pe = static_cast&lt;const PositionEvt*&gt;(customEvent);
-int16_t newPosition = pe-&gt;position;
-m_motorPosition = newPosition;
-consoleDisplayArgs(&quot;%s: received custom sig, position = %d\r\n&quot;, m_name, newPosition);</code>
+int16_t position = pe-&gt;position;
+int16_t device = pe-&gt;device;
+m_motorPosition = position;
+
+consoleDisplayArgs(&quot;%s: received custom sig, position = %d, device = %d\r\n&quot;,
+    m_name, position, device);</code>
    </operation>
   </class>
  </package>
- <extern_package file="./../../../../quantum_addon/quantum_addon/Cpp/Src/addon_shared.qmp"/>
- <extern_package file="./../../../../quantum_addon/quantum_addon/Cpp/Src/addon_aos.qmp"/>
+ <extern_package file="./../../../../quantum_addon_stm32/quantum_addon/Cpp/Src/addon_shared.qmp"/>
+ <extern_package file="./../../../../quantum_addon_stm32/quantum_addon/Cpp/Src/addon_aos.qmp"/>
  <!--${.}-->
  <directory name=".">
   <!--${.::../Inc}-->
@@ -1190,10 +1223,10 @@ void init() {
 //............................................................................
 void start() {
     // initialize event pools
-    consoleDisplay(&quot;App starting&quot;);
+    consoleDisplay(&quot;App starting\r\n&quot;);
 
     const int numActors = 6;
-    static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
+    static QF_MPOOL_EL(APP::PositionEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 #ifdef USE_PUBLISH
     // initialize publish-subscribe

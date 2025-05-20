@@ -64,6 +64,9 @@ public:
     MotionMgr();
     void ChangeKnobPosition(std::uint8_t knobPosition);
 
+private:
+    void PublishShowStateEvent();
+
 protected:
     Q_STATE_DECL(initial);
     Q_STATE_DECL(idle);

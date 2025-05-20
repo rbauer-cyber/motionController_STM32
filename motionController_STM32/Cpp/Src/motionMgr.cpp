@@ -107,6 +107,13 @@ void MotionMgr::ChangeKnobPosition(std::uint8_t knobPosition) {
     SendMoveEvent(newPosition);
 }
 
+//${AOs::MotionMgr::PublishShowStateEvent} ...................................
+void MotionMgr::PublishShowStateEvent() {
+    // Cause system to broadcast state
+    MoveEvt* pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
+    QP::QActive::PUBLISH(pe, this);
+}
+
 //${AOs::MotionMgr::SM} ......................................................
 Q_STATE_DEF(MotionMgr, initial) {
     //${AOs::MotionMgr::SM::initial}
@@ -159,6 +166,13 @@ Q_STATE_DEF(MotionMgr, idle) {
                 consoleDisplayArgs("%s: motor position = %d\r\n", m_name, position);
             }
             status_ = Q_RET_HANDLED;
+            break;
+        }
+        //${AOs::MotionMgr::SM::idle::SYNC}
+        case SYNC_SIG: {
+            consoleDisplayArgs("%s: Sync system\r\n", m_name);
+            PublishShowStateEvent();
+            status_ = tran(&idle);
             break;
         }
         default: {

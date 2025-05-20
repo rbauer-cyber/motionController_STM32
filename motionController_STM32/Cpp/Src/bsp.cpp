@@ -96,10 +96,10 @@ void init() {
 //............................................................................
 void start() {
     // initialize event pools
-    consoleDisplay("App starting");
+    consoleDisplay("App starting\r\n");
 
     const int numActors = 6;
-    static QF_MPOOL_EL(APP::MoveErrorEvt) smlPoolSto[2*numActors];
+    static QF_MPOOL_EL(APP::PositionEvt) smlPoolSto[2*numActors];
     QP::QF::poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 #ifdef USE_PUBLISH
     // initialize publish-subscribe

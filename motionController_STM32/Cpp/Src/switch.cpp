@@ -178,12 +178,13 @@ Q_STATE_DEF(Switch, readSwitch) {
             m_state = BSP_readSwitch();
             m_notifyCount += 1;
 
+            #if 0
             if ( m_initSystemState-- > 1 )
             {
                 MoveEvt* pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
                 QP::QActive::PUBLISH(pe, this);
             }
-
+            #endif
             CreateOneShotTimer(1000);
             status_ = Q_RET_HANDLED;
             break;
