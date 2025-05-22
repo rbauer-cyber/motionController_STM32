@@ -68,14 +68,12 @@ public:
     void ChangeKnobPosition(std::uint8_t knobPosition);
 
 private:
-    void PublishShowStateEvent();
     void CreateOneShotTimer(uint32_t time);
 
 protected:
     Q_STATE_DECL(initial);
     Q_STATE_DECL(idle);
     Q_STATE_DECL(moving);
-    Q_STATE_DECL(SyncSystem);
 }; // class MotionMgr
 
 } // namespace APP

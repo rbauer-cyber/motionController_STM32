@@ -49,8 +49,8 @@ namespace APP {
 enum MotSignals : QP::QSignal {
     MOVE_TIME_SIG = QP::Q_USER_SIG,
     MOT_CUSTOM_SIG,
+    MOT_SHOW_STATE_SIG,
     UPDATE_TIME_SIG,
-    SHOW_STATE_SIG,
     POSITION_SIG,
     MAX_PUB_SIG,
     SYNC_SIG,

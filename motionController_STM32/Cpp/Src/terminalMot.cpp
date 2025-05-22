@@ -140,15 +140,15 @@ void TerminalMot::DispatchCommand(char command) {
             break;
         case 'u':
         case 'U':
-    #if 0
-            pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
-            QP::QActive::PUBLISH(pe, this);
-    #endif
             consoleDisplayArgs("%s: motor = %d, knob = %d\r\n",
                 m_name, m_motorPosition, m_knobPosition );
-
+    #if 1
+            pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
+            QP::QActive::PUBLISH(pe, this);
+    #else
             pe = Q_NEW(MoveEvt, SYNC_SIG);
             AO_MotionMgr->POST(pe, this);
+    #endif
             break;
         case '+':
             m_motorPosition += 1000;
@@ -190,8 +190,8 @@ void TerminalMot::LoadCustomEvt(const CustomEvt* customEvent) {
         m_knobPosition = position;
     }
 
-    //consoleDisplayArgs("%s: received custom sig, position = %d, device = %d\r\n",
-    //    m_name, position, device);
+    consoleDisplayArgs("%s: received custom sig, position = %d, device = %d\r\n",
+        m_name, position, device);
 }
 
 } // namespace APP
