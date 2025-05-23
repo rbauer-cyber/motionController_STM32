@@ -137,6 +137,7 @@ extern QP::QActive * const AO_Switch;
 enum AppError : QP::QSignal {
     ERROR_NONE,
     ERROR_LIMIT_SWITCH,
+    ERROR_POSITION,
     ERROR_STOP,
     ERROR_TIME_OUT
 };

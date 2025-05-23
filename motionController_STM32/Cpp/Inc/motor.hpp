@@ -69,6 +69,9 @@ public:
     QP::QActive * m_AO_Client;
 
 private:
+    bool m_foundLimitSwitch;
+
+private:
     std::int8_t MotionDone();
     std::int16_t MoveMotor();
     void CreateOneShotTimer(uint32_t time);
@@ -80,6 +83,7 @@ public:
 
 private:
     void PublishPositionEvent();
+    bool AtDestination();
 
 protected:
     Q_STATE_DECL(initial);

@@ -116,6 +116,28 @@ void MotionMgr::CreateOneShotTimer(uint32_t time) {
     m_timeEvt.armX(time, 0U);
 }
 
+//${AOs::MotionMgr::ReceiveMotorMovedEvt} ....................................
+void MotionMgr::ReceiveMotorMovedEvt(QP::QEvt const * e) {
+    int16_t position = Q_EVT_CAST(MovedEvt)->position;
+    consoleDisplayArgs("%s: moved event\r\n", m_name);
+
+    if ( m_currentPosition != position )
+    {
+        m_currentPosition = position;
+        consoleDisplayArgs("%s: motor position = %d\r\n", m_name, position);
+    }
+}
+
+//${AOs::MotionMgr::ReceiveMotorErrorEvt} ....................................
+void MotionMgr::ReceiveMotorErrorEvt(QP::QEvt const * e) {
+    int16_t position = Q_EVT_CAST(MoveErrorEvt)->position;
+    uint8_t error = Q_EVT_CAST(MoveErrorEvt)->error;
+    m_currentPosition = position;
+
+    consoleDisplayArgs("%s: motor error = %d, position = %d\r\n",
+                        m_name, error, position );
+}
+
 //${AOs::MotionMgr::SM} ......................................................
 Q_STATE_DEF(MotionMgr, initial) {
     //${AOs::MotionMgr::SM::initial}
@@ -160,13 +182,16 @@ Q_STATE_DEF(MotionMgr, idle) {
         }
         //${AOs::MotionMgr::SM::idle::MOVED}
         case MOVED_SIG: {
-            int16_t position = Q_EVT_CAST(MovedEvt)->position;
-
-            if ( m_currentPosition != position )
-            {
-                m_currentPosition = position;
-                consoleDisplayArgs("%s: motor position = %d\r\n", m_name, position);
-            }
+            // This transition intended to catch events resulting from another AO
+            // causing motor movement.
+            ReceiveMotorMovedEvt(e);
+            status_ = Q_RET_HANDLED;
+            break;
+        }
+        //${AOs::MotionMgr::SM::idle::MOVE_ERROR}
+        case MOVE_ERROR_SIG: {
+            // Received error event from motor
+            ReceiveMotorErrorEvt(e);
             status_ = Q_RET_HANDLED;
             break;
         }
@@ -184,21 +209,15 @@ Q_STATE_DEF(MotionMgr, moving) {
     switch (e->sig) {
         //${AOs::MotionMgr::SM::moving::MOVED}
         case MOVED_SIG: {
-            // Received event from motor
-            int16_t position = Q_EVT_CAST(MovedEvt)->position;
-            m_currentPosition = position;
-            consoleDisplayArgs("%s: motor position = %d\r\n", m_name, position);
+            // Received moved event from motor
+            ReceiveMotorMovedEvt(e);
             status_ = tran(&idle);
             break;
         }
         //${AOs::MotionMgr::SM::moving::MOVE_ERROR}
         case MOVE_ERROR_SIG: {
-            // Received event from motor
-            int16_t position = Q_EVT_CAST(MoveErrorEvt)->position;
-            uint8_t error = Q_EVT_CAST(MoveErrorEvt)->error;
-            m_currentPosition = position;
-            consoleDisplayArgs("%s: motor position = %d, error = %d\r\n",
-                                m_name, position, error);
+            // Received error event from motor
+            ReceiveMotorErrorEvt(e);
             status_ = tran(&idle);
             break;
         }

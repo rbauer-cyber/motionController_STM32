@@ -67,7 +67,7 @@ Motor Motor::inst;
 
 //${AOs::Motor::MotionDone} ..................................................
 std::int8_t Motor::MotionDone() {
-    return m_position == m_positionRequest;
+    return AtDestination();
 }
 
 //${AOs::Motor::MoveMotor} ...................................................
@@ -101,19 +101,15 @@ void Motor::SendMotionDoneEvent() {
     // Notify client motion done
     MovedEvt *myEvt = Q_NEW(MovedEvt, MOVED_SIG);
     myEvt->position = m_position;
-    //QACTIVE_POST(AO_MotionMgr, (QEvt*)myEvt, &me->super);
-    //ACTIVE_POST(m_AO_Client->Post(myEvt, this);, (QEvt*)myEvt, &super);
     m_AO_Client->POST(myEvt, this);
 }
 
 //${AOs::Motor::SendMotionErrorEvent} ........................................
 void Motor::SendMotionErrorEvent() {
-    // Notify client motion done
+    // Notify client motion error
     MoveErrorEvt *myEvt = Q_NEW(MoveErrorEvt, MOVE_ERROR_SIG);
     myEvt->position = m_position;
     myEvt->error = m_error;
-    //QACTIVE_POST(AO_MotionMgr, (QEvt*)myEvt, &me->super);
-    //QACTIVE_POST(m_AO_Client, (QEvt*)myEvt, &super);
     m_AO_Client->POST(myEvt, this);
 }
 
@@ -138,6 +134,11 @@ void Motor::PublishPositionEvent() {
     myEvt->position = m_position;
     myEvt->device = AO_MOTOR;
     QP::QActive::PUBLISH(myEvt, this);
+}
+
+//${AOs::Motor::AtDestination} ...............................................
+bool Motor::AtDestination() {
+    return m_position == m_positionRequest;
 }
 
 //${AOs::Motor::SM} ..........................................................
@@ -222,9 +223,7 @@ Q_STATE_DEF(Motor, Moving) {
             //consoleDisplay("Motor: move motor");
             MoveMotor();
             //${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[MotionDone]}
-            if (MotionDone()) {
-                // Notify client motion done
-                SendMotionDoneEvent();
+            if (AtDestination()) {
                 status_ = tran(&Stopped);
             }
             //${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[else]}
@@ -233,8 +232,9 @@ Q_STATE_DEF(Motor, Moving) {
                 if (m_atLimitSwitch == 1) {
                     consoleDisplay("Motor: stopped by limit switch\r\n");
 
-                    if (m_findingLimit) {
+                    if ( m_findingLimit ) {
                         consoleDisplay("Motor: found switch, setting home position\r\n");
+                        m_foundLimitSwitch = true;
                         m_position = 0;
                     }
                     else {
@@ -266,12 +266,10 @@ Q_STATE_DEF(Motor, Stopped) {
             if ( m_moving ) {
                 consoleDisplayArgs("Motor: stopped, position = %d\r\n", m_position);
 
-                if (m_position == m_positionRequest)
-                {
+                if ( m_error == ERROR_NONE ) {
                     SendMotionDoneEvent();
                 }
-                else
-                {
+                else {
                     SendMotionErrorEvent();
                 }
 
@@ -279,13 +277,7 @@ Q_STATE_DEF(Motor, Stopped) {
                 m_moving = 0;
             }
 
-            //#ifdef POSITION_EVT
-            #if 1
-            PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
-            myEvt->position = m_position;
-            myEvt->device = AO_MOTOR;
-            QP::QActive::PUBLISH(myEvt, this);
-            #endif
+            PublishPositionEvent();
             status_ = Q_RET_HANDLED;
             break;
         }
@@ -295,9 +287,11 @@ Q_STATE_DEF(Motor, Stopped) {
             int16_t newPosition = Q_EVT_CAST(MoveEvt)->position;
             m_positionRequest = newPosition;
             m_increment = m_positionRequest - m_position;
+            m_foundLimitSwitch = false;
             m_error = ERROR_NONE;
 
-            if ( Q_EVT_CAST(MoveEvt)->sig == FIND_LIMIT_SIG ) {
+            if ( Q_EVT_CAST(MoveEvt)->sig == FIND_LIMIT_SIG )
+            {
                 consoleDisplay("Motor: finding limit\r\n");
                 m_findingLimit = 1;
             }
@@ -305,19 +299,19 @@ Q_STATE_DEF(Motor, Stopped) {
             consoleDisplayArgs("Motor: requested position = %d, position = %d\r\n",
                 newPosition, m_position);
             //${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[AtPositionOrAtLimit]}
-            if ((m_positionRequest == m_position) ||
-                (m_increment < 0 && m_atLimitSwitch))
-            {
-                if ( m_atLimitSwitch ) {
+            if (AtDestination() || (m_increment < 0 && m_atLimitSwitch)) {
+                if ( m_atLimitSwitch )
+                {
                     consoleDisplay("Motor: no move, at limit switch\r\n");
                 }
-                else {
+                else
+                {
                     consoleDisplay("Motor: no move, already at position\r\n");
                 }
                 status_ = tran(&Stopped);
             }
             //${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[NewPosition]}
-            else if (m_positionRequest != m_position) {
+            else if (!AtDestination()) {
                 consoleDisplayArgs("Motor: moving, increment: %d\r\n", m_increment);
                 status_ = tran(&Moving);
             }

@@ -106,7 +106,7 @@ void TerminalMot::DispatchCommand(char command) {
         case 'F':
             pe = Q_NEW(MoveEvt, FIND_LIMIT_SIG);
             pe->position = -4000;
-            AO_MotionMgr->POST(pe, this);
+            AO_Motor->POST(pe, this);
             break;
         case 'h':
         case 'H':
@@ -189,9 +189,10 @@ void TerminalMot::LoadCustomEvt(const CustomEvt* customEvent) {
     {
         m_knobPosition = position;
     }
-
-    consoleDisplayArgs("%s: received custom sig, position = %d, device = %d\r\n",
+    #if 0
+    consoleDisplayArgs("%s: custom sig, position = %d, device = %d\r\n",
         m_name, position, device);
+    #endif
 }
 
 } // namespace APP

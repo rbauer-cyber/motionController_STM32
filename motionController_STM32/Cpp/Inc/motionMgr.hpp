@@ -69,6 +69,8 @@ public:
 
 private:
     void CreateOneShotTimer(uint32_t time);
+    void ReceiveMotorMovedEvt(QP::QEvt const * e);
+    void ReceiveMotorErrorEvt(QP::QEvt const * e);
 
 protected:
     Q_STATE_DECL(initial);

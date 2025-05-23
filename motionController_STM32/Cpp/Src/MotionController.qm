@@ -129,6 +129,7 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
    <code>: QP::QSignal {
     ERROR_NONE,
     ERROR_LIMIT_SWITCH,
+    ERROR_POSITION,
     ERROR_STOP,
     ERROR_TIME_OUT
 };</code>
@@ -229,9 +230,11 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
    <attribute name="m_error" type="std::uint8_t" visibility="0x00" properties="0x00"/>
    <!--${AOs::Motor::m_AO_Client}-->
    <attribute name="m_AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Motor::m_foundLimitSwitch}-->
+   <attribute name="m_foundLimitSwitch" type="bool" visibility="0x02" properties="0x00"/>
    <!--${AOs::Motor::MotionDone}-->
    <operation name="MotionDone" type="std::int8_t" visibility="0x02" properties="0x00">
-    <code>return m_position == m_positionRequest;</code>
+    <code>return AtDestination();</code>
    </operation>
    <!--${AOs::Motor::MoveMotor}-->
    <operation name="MoveMotor" type="std::int16_t" visibility="0x02" properties="0x00">
@@ -264,18 +267,14 @@ m_timeEvt.armX(time, 0U);</code>
     <code>// Notify client motion done
 MovedEvt *myEvt = Q_NEW(MovedEvt, MOVED_SIG);
 myEvt-&gt;position = m_position;
-//QACTIVE_POST(AO_MotionMgr, (QEvt*)myEvt, &amp;me-&gt;super);
-//ACTIVE_POST(m_AO_Client-&gt;Post(myEvt, this);, (QEvt*)myEvt, &amp;super);
 m_AO_Client-&gt;POST(myEvt, this);</code>
    </operation>
    <!--${AOs::Motor::SendMotionErrorEvent}-->
    <operation name="SendMotionErrorEvent" type="void" visibility="0x02" properties="0x00">
-    <code>// Notify client motion done
+    <code>// Notify client motion error
 MoveErrorEvt *myEvt = Q_NEW(MoveErrorEvt, MOVE_ERROR_SIG);
 myEvt-&gt;position = m_position;
 myEvt-&gt;error = m_error;
-//QACTIVE_POST(AO_MotionMgr, (QEvt*)myEvt, &amp;me-&gt;super);
-//QACTIVE_POST(m_AO_Client, (QEvt*)myEvt, &amp;super);
 m_AO_Client-&gt;POST(myEvt, this);</code>
    </operation>
    <!--${AOs::Motor::Motor}-->
@@ -298,6 +297,10 @@ PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
 myEvt-&gt;position = m_position;
 myEvt-&gt;device = AO_MOTOR;
 QP::QActive::PUBLISH(myEvt, this);</code>
+   </operation>
+   <!--${AOs::Motor::AtDestination}-->
+   <operation name="AtDestination" type="bool" visibility="0x02" properties="0x00">
+    <code>return m_position == m_positionRequest;</code>
    </operation>
    <!--${AOs::Motor::SM}-->
    <statechart properties="0x01">
@@ -367,9 +370,7 @@ CreateOneShotTimer(moveTime);</entry>
 MoveMotor();</action>
        <!--${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[MotionDone]}-->
        <choice target="../../../4">
-        <guard brief="MotionDone">MotionDone()</guard>
-        <action>// Notify client motion done
-SendMotionDoneEvent();</action>
+        <guard brief="MotionDone">AtDestination()</guard>
         <choice_glyph conn="29,56,5,2,10,-26">
          <action box="2,0,10,2"/>
         </choice_glyph>
@@ -382,8 +383,9 @@ SendMotionDoneEvent();</action>
          <guard brief="At Limit Switch">m_atLimitSwitch == 1</guard>
          <action>consoleDisplay(&quot;Motor: stopped by limit switch\r\n&quot;);
 
-if (m_findingLimit) {
+if ( m_findingLimit ) {
     consoleDisplay(&quot;Motor: found switch, setting home position\r\n&quot;);
+    m_foundLimitSwitch = true;
     m_position = 0;
 }
 else {
@@ -418,12 +420,10 @@ else {
       <entry brief="Notify Client">if ( m_moving ) {
     consoleDisplayArgs(&quot;Motor: stopped, position = %d\r\n&quot;, m_position);
 
-    if (m_position == m_positionRequest)
-    {
+    if ( m_error == ERROR_NONE ) {
         SendMotionDoneEvent();
     }
-    else
-    {
+    else {
         SendMotionErrorEvent();
     }
 
@@ -431,21 +431,17 @@ else {
     m_moving = 0;
 }
 
-//#ifdef POSITION_EVT
-#if 1
-PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
-myEvt-&gt;position = m_position;
-myEvt-&gt;device = AO_MOTOR;
-QP::QActive::PUBLISH(myEvt, this);
-#endif</entry>
+PublishPositionEvent();</entry>
       <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT}-->
       <tran trig="MOVE, FIND_LIMIT">
        <action>int16_t newPosition = Q_EVT_CAST(MoveEvt)-&gt;position;
 m_positionRequest = newPosition;
 m_increment = m_positionRequest - m_position;
+m_foundLimitSwitch = false;
 m_error = ERROR_NONE;
 
-if ( Q_EVT_CAST(MoveEvt)-&gt;sig == FIND_LIMIT_SIG ) {
+if ( Q_EVT_CAST(MoveEvt)-&gt;sig == FIND_LIMIT_SIG )
+{
     consoleDisplay(&quot;Motor: finding limit\r\n&quot;);
     m_findingLimit = 1;
 }
@@ -454,12 +450,13 @@ consoleDisplayArgs(&quot;Motor: requested position = %d, position = %d\r\n&quot;
     newPosition, m_position);</action>
        <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[AtPositionOrAtLimit]}-->
        <choice target="../..">
-        <guard brief="AtPositionOrAtLimit">(m_positionRequest == m_position) ||
-(m_increment &lt; 0 &amp;&amp; m_atLimitSwitch)</guard>
-        <action>if ( m_atLimitSwitch ) {
+        <guard brief="AtPositionOrAtLimit">AtDestination() || (m_increment &lt; 0 &amp;&amp; m_atLimitSwitch)</guard>
+        <action>if ( m_atLimitSwitch )
+{
     consoleDisplay(&quot;Motor: no move, at limit switch\r\n&quot;);
 }
-else {
+else
+{
     consoleDisplay(&quot;Motor: no move, already at position\r\n&quot;);
 }</action>
         <choice_glyph conn="21,38,5,2,10,-8">
@@ -468,7 +465,7 @@ else {
        </choice>
        <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[NewPosition]}-->
        <choice target="../../../3">
-        <guard brief="NewPosition">m_positionRequest != m_position</guard>
+        <guard brief="NewPosition">!AtDestination()</guard>
         <action>consoleDisplayArgs(&quot;Motor: moving, increment: %d\r\n&quot;, m_increment);</action>
         <choice_glyph conn="21,38,4,0,8">
          <action box="1,1,10,2"/>
@@ -559,6 +556,30 @@ SendMoveEvent(newPosition);</code>
 //QTimeEvt_armX(&amp;me-&gt;timeEvt, time, 0);
 m_timeEvt.armX(time, 0U);</code>
    </operation>
+   <!--${AOs::MotionMgr::ReceiveMotorMovedEvt}-->
+   <operation name="ReceiveMotorMovedEvt" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::MotionMgr::ReceiveMotorMove~::e}-->
+    <parameter name="e" type="QP::QEvt const *"/>
+    <code>int16_t position = Q_EVT_CAST(MovedEvt)-&gt;position;
+consoleDisplayArgs(&quot;%s: moved event\r\n&quot;, m_name);
+
+if ( m_currentPosition != position )
+{
+    m_currentPosition = position;
+    consoleDisplayArgs(&quot;%s: motor position = %d\r\n&quot;, m_name, position);
+}</code>
+   </operation>
+   <!--${AOs::MotionMgr::ReceiveMotorErrorEvt}-->
+   <operation name="ReceiveMotorErrorEvt" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::MotionMgr::ReceiveMotorErro~::e}-->
+    <parameter name="e" type="QP::QEvt const *"/>
+    <code>int16_t position = Q_EVT_CAST(MoveErrorEvt)-&gt;position;
+uint8_t error = Q_EVT_CAST(MoveErrorEvt)-&gt;error;
+m_currentPosition = position;
+
+consoleDisplayArgs(&quot;%s: motor error = %d, position = %d\r\n&quot;,
+                    m_name, error, position );</code>
+   </operation>
    <!--${AOs::MotionMgr::SM}-->
    <statechart properties="0x01">
     <documentation>MotionMgr state machine</documentation>
@@ -602,15 +623,19 @@ int8_t knobPosition = Q_EVT_CAST(KnobEvt)-&gt;position;</action>
      </tran>
      <!--${AOs::MotionMgr::SM::idle::MOVED}-->
      <tran trig="MOVED">
-      <action brief="Update Position">int16_t position = Q_EVT_CAST(MovedEvt)-&gt;position;
-
-if ( m_currentPosition != position )
-{
-    m_currentPosition = position;
-    consoleDisplayArgs(&quot;%s: motor position = %d\r\n&quot;, m_name, position);
-}</action>
-      <tran_glyph color="1" conn="6,19,3,-1,14">
+      <action brief="Update Position">// This transition intended to catch events resulting from another AO
+// causing motor movement.
+ReceiveMotorMovedEvt(e);</action>
+      <tran_glyph color="1" conn="6,19,3,-1,12">
        <action box="1,1,20,2"/>
+      </tran_glyph>
+     </tran>
+     <!--${AOs::MotionMgr::SM::idle::MOVE_ERROR}-->
+     <tran trig="MOVE_ERROR">
+      <action>// Received error event from motor
+ReceiveMotorErrorEvt(e);</action>
+      <tran_glyph conn="46,19,1,-1,-13">
+       <action box="-14,1,14,2"/>
       </tran_glyph>
      </tran>
      <state_glyph node="6,13,40,12">
@@ -621,24 +646,18 @@ if ( m_currentPosition != position )
     <state name="moving">
      <!--${AOs::MotionMgr::SM::moving::MOVED}-->
      <tran trig="MOVED" target="../../1">
-      <action>// Received event from motor
-int16_t position = Q_EVT_CAST(MovedEvt)-&gt;position;
-m_currentPosition = position;
-consoleDisplayArgs(&quot;%s: motor position = %d\r\n&quot;, m_name, position);</action>
+      <action brief="Update Position">// Received moved event from motor
+ReceiveMotorMovedEvt(e);</action>
       <tran_glyph color="1" conn="34,41,0,2,-16">
-       <action box="0,-11,10,2"/>
+       <action box="0,-11,22,2"/>
       </tran_glyph>
      </tran>
      <!--${AOs::MotionMgr::SM::moving::MOVE_ERROR}-->
      <tran trig="MOVE_ERROR" target="../../1">
-      <action>// Received event from motor
-int16_t position = Q_EVT_CAST(MoveErrorEvt)-&gt;position;
-uint8_t error = Q_EVT_CAST(MoveErrorEvt)-&gt;error;
-m_currentPosition = position;
-consoleDisplayArgs(&quot;%s: motor position = %d, error = %d\r\n&quot;,
-                    m_name, position, error);</action>
+      <action>// Received error event from motor
+ReceiveMotorErrorEvt(e);</action>
       <tran_glyph conn="42,41,0,2,-16">
-       <action box="0,-7,13,2"/>
+       <action box="0,-6,13,2"/>
       </tran_glyph>
      </tran>
      <state_glyph color="2" node="6,41,40,12"/>
@@ -981,7 +1000,7 @@ switch ( command ) {
     case 'F':
         pe = Q_NEW(MoveEvt, FIND_LIMIT_SIG);
         pe-&gt;position = -4000;
-        AO_MotionMgr-&gt;POST(pe, this);
+        AO_Motor-&gt;POST(pe, this);
         break;
     case 'h':
     case 'H':
@@ -1064,9 +1083,10 @@ else if ( device == AO_KNOB )
 {
     m_knobPosition = position;
 }
-
-consoleDisplayArgs(&quot;%s: received custom sig, position = %d, device = %d\r\n&quot;,
-    m_name, position, device);</code>
+#if 0
+consoleDisplayArgs(&quot;%s: custom sig, position = %d, device = %d\r\n&quot;,
+    m_name, position, device);
+#endif</code>
    </operation>
   </class>
  </package>
