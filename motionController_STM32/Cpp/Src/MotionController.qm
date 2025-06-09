@@ -192,15 +192,134 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
    <attribute name="position" type="std::int16_t" visibility="0x00" properties="0x00"/>
    <!--${Shared::PositionEvt::device}-->
    <attribute name="device" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::PositionEvt::error}-->
+   <attribute name="error" type="std::uint8_t" visibility="0x00" properties="0x00"/>
    <!--${Shared::PositionEvt::PositionEvt}-->
    <operation name="PositionEvt" type="constexpr" visibility="0x00" properties="0x02">
     <!--${Shared::PositionEvt::PositionEvt::thePosition}-->
     <parameter name="thePosition" type="std::int16_t"/>
     <!--${Shared::PositionEvt::PositionEvt::theDevice}-->
     <parameter name="theDevice" type="std::int16_t"/>
+    <!--${Shared::PositionEvt::PositionEvt::theError=0}-->
+    <parameter name="theError=0" type="std::int8_t"/>
     <code> : CustomEvt(CUSTOM_SIG, POSITION_SIG),
    position(thePosition),
-   device(theDevice)</code>
+   device(theDevice),
+   error(theError)</code>
+   </operation>
+  </class>
+  <!--${Shared::CMeasure}-->
+  <class name="CMeasure">
+   <!--${Shared::CMeasure::m_intervalStartTime}-->
+   <attribute name="m_intervalStartTime" type="std::uint64_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_intervalEndTime}-->
+   <attribute name="m_intervalEndTime" type="std::uint64_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_intervalElapsedTime}-->
+   <attribute name="m_intervalElapsedTime" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_maxElapsedTimeDelta}-->
+   <attribute name="m_maxElapsedTimeDelta" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_intervalElapsedTimeDelta}-->
+   <attribute name="m_intervalElapsedTimeDelta" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_intervalCount}-->
+   <attribute name="m_intervalCount" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_minElapsedTimeDelta}-->
+   <attribute name="m_minElapsedTimeDelta" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_avgElapsedTimeDelta}-->
+   <attribute name="m_avgElapsedTimeDelta" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::kIntervalOffset}-->
+   <attribute name="kIntervalOffset" type="const std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_avgElapsedTime}-->
+   <attribute name="m_avgElapsedTime" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_intervalThresholdCount}-->
+   <attribute name="m_intervalThresholdCount" type="std::uint32_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::m_updateCount}-->
+   <attribute name="m_updateCount" type="std::uint16_t" visibility="0x00" properties="0x00"/>
+   <!--${Shared::CMeasure::UpdateElapsedTime}-->
+   <operation name="UpdateElapsedTime" type="void" visibility="0x00" properties="0x00">
+    <code>m_intervalEndTime = getMicros();
+uint32_t elapsedTime = m_intervalEndTime - m_intervalStartTime;
+uint32_t elapsedTimeDelta = 0;
+
+if ( elapsedTime &gt; 1000 )
+{
+    if ( m_updateCount &gt; kIntervalOffset )
+    {
+        if ( elapsedTime &gt; m_intervalElapsedTime )
+            elapsedTimeDelta = elapsedTime - m_intervalElapsedTime;
+        else
+            elapsedTimeDelta = m_intervalElapsedTime - elapsedTime;
+
+        m_intervalCount += 1;
+
+        if ( elapsedTimeDelta &gt; m_maxElapsedTimeDelta )
+        {
+            m_maxElapsedTimeDelta = elapsedTimeDelta;
+        }
+        if ( elapsedTimeDelta &lt; m_minElapsedTimeDelta )
+        {
+            m_minElapsedTimeDelta = elapsedTimeDelta;
+        }
+
+        m_avgElapsedTimeDelta += elapsedTimeDelta;
+        m_avgElapsedTime += elapsedTime;
+
+        if ( elapsedTimeDelta &gt; 100 )
+        {
+            m_intervalThresholdCount += 1;
+        }
+    }
+    else
+    {
+        m_updateCount += 1;
+    }
+
+    m_intervalElapsedTime = elapsedTime;
+}</code>
+   </operation>
+   <!--${Shared::CMeasure::DisplayElapsedTime}-->
+   <operation name="DisplayElapsedTime" type="void" visibility="0x00" properties="0x00">
+    <code>CONSOLE_DISPLAY_ARGS(&quot;elapsed time us = %d\r\n&quot;, m_intervalElapsedTime);</code>
+   </operation>
+   <!--${Shared::CMeasure::DisplayElapsedTimeDelta}-->
+   <operation name="DisplayElapsedTimeDelta" type="void" visibility="0x00" properties="0x00">
+    <code>if ( m_intervalCount &gt; 120 )
+{
+    m_avgElapsedTimeDelta = m_avgElapsedTimeDelta / m_intervalCount;
+    m_avgElapsedTime = m_avgElapsedTime / m_intervalCount;
+
+    CONSOLE_DISPLAY_ARGS(
+        &quot;max/min/avg/avg/cnt elapsed time delta us = %d/%d/%d/%d/%d\r\n&quot;,
+        m_maxElapsedTimeDelta, m_minElapsedTimeDelta,
+        m_avgElapsedTimeDelta, m_avgElapsedTime,
+        m_intervalThresholdCount);
+
+    m_maxElapsedTimeDelta = 0;
+    m_minElapsedTimeDelta = 10000;
+    m_avgElapsedTimeDelta = 0;
+    m_avgElapsedTime = 0;
+    m_intervalEndTime = getMicros();
+    m_intervalThresholdCount = 0;
+    m_intervalCount = 0;
+}</code>
+   </operation>
+   <!--${Shared::CMeasure::Initialize}-->
+   <operation name="Initialize" type="void" visibility="0x00" properties="0x00">
+    <code>m_intervalElapsedTime = 0;
+m_maxElapsedTimeDelta = 0;
+m_minElapsedTimeDelta = 10000;
+m_avgElapsedTimeDelta = 0;
+m_avgElapsedTime = 0;
+m_intervalCount = 0;
+m_intervalThresholdCount = 0;
+m_updateCount = 0;</code>
+   </operation>
+   <!--${Shared::CMeasure::Start}-->
+   <operation name="Start" type="void" visibility="0x00" properties="0x00">
+    <code>m_intervalStartTime = getMicros();</code>
+   </operation>
+   <!--${Shared::CMeasure::CMeasure}-->
+   <operation name="CMeasure" type="" visibility="0x00" properties="0x00">
+    <code>: kIntervalOffset(4)</code>
    </operation>
   </class>
  </package>
@@ -296,6 +415,7 @@ m_moving = 0;</code>
 PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
 myEvt-&gt;position = m_position;
 myEvt-&gt;device = AO_MOTOR;
+myEvt-&gt;error = m_error;
 QP::QActive::PUBLISH(myEvt, this);</code>
    </operation>
    <!--${AOs::Motor::AtDestination}-->
@@ -841,6 +961,8 @@ CreateOneShotTimer(1000);</entry>
    <attribute name="m_AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
    <!--${AOs::Switch::m_initSystemState}-->
    <attribute name="m_initSystemState" type="std::int16_t" visibility="0x00" properties="0x00"/>
+   <!--${AOs::Switch::m_measure}-->
+   <attribute name="m_measure" type="CMeasure" visibility="0x00" properties="0x00"/>
    <!--${AOs::Switch::CreatePeriodicTimer}-->
    <operation name="CreatePeriodicTimer" type="void" visibility="0x02" properties="0x00">
     <!--${AOs::Switch::CreatePeriodicTi~::time}-->
@@ -910,6 +1032,7 @@ m_timeEvt.armX(time, 0);</code>
      <action>// Start periodic time to read switch position
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
 consoleDisplay(&quot;Switch: starting\r\n&quot;);
+m_measure.Initialize();
 //CreateOneShotTimer(1000);</action>
      <initial_glyph color="3" conn="18,3,4,0,9">
       <action box="0,-2,10,2"/>
@@ -930,6 +1053,7 @@ if ( m_notifyCount &gt;= 1 )
 CreateOneShotTimer(1000);</entry>
      <!--${AOs::Switch::SM::updateSwitchStat~::UPDATE_TIME}-->
      <tran trig="UPDATE_TIME" target="../../2">
+      <action>m_measure.Start();</action>
       <tran_glyph conn="11,24,2,0,11">
        <action box="0,2,15,2"/>
       </tran_glyph>
@@ -954,6 +1078,8 @@ if ( m_initSystemState-- &gt; 1 )
 CreateOneShotTimer(1000);</entry>
      <!--${AOs::Switch::SM::readSwitch::UPDATE_TIME}-->
      <tran trig="UPDATE_TIME" target="../../1">
+      <action>m_measure.UpdateElapsedTime();
+m_measure.DisplayElapsedTimeDelta();</action>
       <tran_glyph color="1" conn="26,35,0,2,-11">
        <action box="1,-4,13,2"/>
       </tran_glyph>
@@ -979,6 +1105,8 @@ CreateOneShotTimer(1000);</entry>
    <attribute name="m_name" type="const char*" visibility="0x00" properties="0x01">
     <code>= &quot;TerminalMot&quot;;</code>
    </attribute>
+   <!--${AOs::TerminalMot::m_error}-->
+   <attribute name="m_error" type="std::uint8_t" visibility="0x00" properties="0x00"/>
    <!--${AOs::TerminalMot::TerminalMot}-->
    <operation name="TerminalMot" type="" visibility="0x00" properties="0x00">
     <code>  : m_defined(1),
@@ -1034,8 +1162,8 @@ switch ( command ) {
         break;
     case 'u':
     case 'U':
-        consoleDisplayArgs(&quot;%s: motor = %d, knob = %d\r\n&quot;,
-            m_name, m_motorPosition, m_knobPosition );
+        consoleDisplayArgs(&quot;%s: motor = %d, knob = %d, err = %d\r\n&quot;,
+            m_name, m_motorPosition, m_knobPosition, m_error );
 #if 1
         pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
         QP::QActive::PUBLISH(pe, this);
@@ -1074,6 +1202,7 @@ switch ( command ) {
     <code>const PositionEvt* pe = static_cast&lt;const PositionEvt*&gt;(customEvent);
 int16_t position = pe-&gt;position;
 int16_t device = pe-&gt;device;
+m_error = pe-&gt;error;
 
 if ( device == AO_MOTOR )
 {
@@ -1083,6 +1212,7 @@ else if ( device == AO_KNOB )
 {
     m_knobPosition = position;
 }
+
 #if 0
 consoleDisplayArgs(&quot;%s: custom sig, position = %d, device = %d\r\n&quot;,
     m_name, position, device);
@@ -1192,6 +1322,18 @@ $declare ${AOs::Switch}
 
 #endif</text>
    </file>
+   <!--${.::../Inc::measure.hpp}-->
+   <file name="measure.hpp">
+    <text>#ifndef MEASURE_H
+#define MEASURE_H
+
+#include &quot;qpcpp.hpp&quot;             // QP/C++ real-time embedded framework
+#include &lt;cstdint&gt;
+
+$declare ${Shared::CMeasure}
+
+#endif</text>
+   </file>
   </directory>
   <!--${.::bsp.cpp}-->
   <file name="bsp.cpp">
@@ -1208,6 +1350,8 @@ $declare ${AOs::Switch}
 #define TIMER_ONE_ISR
 #define TIMER_SCALAR 1
 #define KNOB_MAX 20
+
+extern uint16_t g_appReady;
 
 //============================================================================
 namespace { // unnamed namespace for local stuff with internal linkage
@@ -1318,6 +1462,7 @@ void start() {
         myMotionMgrEvt);             // attach client
 
     consoleDisplay(&quot;App started\r\n&quot;);
+    g_appReady = 1;
 }
 //............................................................................
 void displayPaused(uint8_t paused) {
@@ -1542,6 +1687,14 @@ $declare ${AOs::TerminalMot}
 //----------------------------------------------------------------------------
 $define ${Shared::AO_TerminalMot}
 $define ${AOs::TerminalMot}</text>
+  </file>
+  <!--${.::measure.cpp}-->
+  <file name="measure.cpp">
+   <text>#include &quot;main.h&quot;
+#include &quot;measure.hpp&quot;
+#include &quot;console.h&quot;
+// ask QM to declare the Measure class
+$define ${Shared::CMeasure}</text>
   </file>
  </directory>
 </model>

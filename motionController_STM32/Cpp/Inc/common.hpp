@@ -194,16 +194,44 @@ class PositionEvt : public APP::CustomEvt {
 public:
     std::int16_t position;
     std::int16_t device;
+    std::uint8_t error;
 
 public:
     constexpr PositionEvt(
         std::int16_t thePosition,
-        std::int16_t theDevice)
+        std::int16_t theDevice,
+        std::int8_t theError=0)
      : CustomEvt(CUSTOM_SIG, POSITION_SIG),
        position(thePosition),
-       device(theDevice)
+       device(theDevice),
+       error(theError)
     {}
 }; // class PositionEvt
+
+//${Shared::CMeasure} ........................................................
+class CMeasure {
+public:
+    std::uint64_t m_intervalStartTime;
+    std::uint64_t m_intervalEndTime;
+    std::uint32_t m_intervalElapsedTime;
+    std::uint32_t m_maxElapsedTimeDelta;
+    std::uint32_t m_intervalElapsedTimeDelta;
+    std::uint32_t m_intervalCount;
+    std::uint32_t m_minElapsedTimeDelta;
+    std::uint32_t m_avgElapsedTimeDelta;
+    const std::uint32_t kIntervalOffset;
+    std::uint32_t m_avgElapsedTime;
+    std::uint32_t m_intervalThresholdCount;
+    std::uint16_t m_updateCount;
+
+public:
+    void UpdateElapsedTime();
+    void DisplayElapsedTime();
+    void DisplayElapsedTimeDelta();
+    void Initialize();
+    void Start();
+    CMeasure();
+}; // class CMeasure
 
 } // namespace APP
 //$enddecl${Shared} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

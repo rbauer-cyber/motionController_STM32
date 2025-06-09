@@ -27,22 +27,27 @@
 #include "usart.h"
 #include "QFsys.h"
 #include "bsp.hpp"
+#include "qp_port.hpp"
 
 #include "multiLed.hpp"
 #include "digitalOut.hpp"
 #include "motion.h"
 #include "console.h"
 
+volatile uint16_t g_appReady = 0;
 
 void appSysTickHandler()
 {
 	// Use this variable to communicate with QV::onIdle
 	// to indicate that a critical interrupt from the app
 	// has occurred and needs to be service.
-	Q_SysTick_Handler();
+	if ( g_appReady )
+	{
+		Q_SysTick_Handler();
 
-	if ( !QF_getSysAppEvent() )
-		QF_setSysAppEvent();
+		if ( !QF_getSysAppEvent() )
+			QF_setSysAppEvent();
+	}
 }
 
 //kAnalogPin00,	//PA0	A0 - CN8 - IN1

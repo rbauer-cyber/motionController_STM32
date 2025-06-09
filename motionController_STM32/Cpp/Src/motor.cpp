@@ -133,6 +133,7 @@ void Motor::PublishPositionEvent() {
     PositionEvt *myEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
     myEvt->position = m_position;
     myEvt->device = AO_MOTOR;
+    myEvt->error = m_error;
     QP::QActive::PUBLISH(myEvt, this);
 }
 

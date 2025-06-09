@@ -131,6 +131,7 @@ Q_STATE_DEF(Switch, initial) {
     // Start periodic time to read switch position
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
     consoleDisplay("Switch: starting\r\n");
+    m_measure.Initialize();
     //CreateOneShotTimer(1000);
     return tran(&updateSwitchState);
 }
@@ -157,6 +158,7 @@ Q_STATE_DEF(Switch, updateSwitchState) {
         }
         //${AOs::Switch::SM::updateSwitchStat~::UPDATE_TIME}
         case UPDATE_TIME_SIG: {
+            m_measure.Start();
             status_ = tran(&readSwitch);
             break;
         }
@@ -191,6 +193,8 @@ Q_STATE_DEF(Switch, readSwitch) {
         }
         //${AOs::Switch::SM::readSwitch::UPDATE_TIME}
         case UPDATE_TIME_SIG: {
+            m_measure.UpdateElapsedTime();
+            m_measure.DisplayElapsedTimeDelta();
             status_ = tran(&updateSwitchState);
             break;
         }

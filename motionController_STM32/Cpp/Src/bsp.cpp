@@ -49,6 +49,8 @@
 #define TIMER_SCALAR 1
 #define KNOB_MAX 20
 
+extern uint16_t g_appReady;
+
 //============================================================================
 namespace { // unnamed namespace for local stuff with internal linkage
 
@@ -158,6 +160,7 @@ void start() {
         myMotionMgrEvt);             // attach client
 
     consoleDisplay("App started\r\n");
+    g_appReady = 1;
 }
 //............................................................................
 void displayPaused(uint8_t paused) {

@@ -9,11 +9,11 @@
   <item name="backups">0</item>
  </group>
  <group name="windows">
-  <item id="AOs::Switch::SM">0,0,640,480</item>
-  <item id="AOs::MotionMgr::SM">0,0,817,665,*</item>
-  <item id="AOs::Knob::SM">62,217,640,480</item>
-  <item id="AOs::Motor::SM">62,0,640,480</item>
-  <item id=".::bsp.cpp">0,397,596,300</item>
+  <item id="AOs::Switch::SM">0,0,685,621,*</item>
+  <item id="AOs::MotionMgr::SM">-132,0,817,665</item>
+  <item id="AOs::Knob::SM">45,173,640,480</item>
+  <item id="AOs::Motor::SM">0,0,685,621</item>
+  <item id=".::bsp.cpp">0,32,685,621</item>
   <item id="BaseAOs::Terminal::SM">0,0,784,618</item>
  </group>
  <group name="search">

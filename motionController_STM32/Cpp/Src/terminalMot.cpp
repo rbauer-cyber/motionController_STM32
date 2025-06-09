@@ -52,6 +52,7 @@ public:
     std::uint16_t m_motorPosition;
     std::uint16_t m_knobPosition;
     static const char* m_name;
+    std::uint8_t m_error;
 
 public:
     TerminalMot();
@@ -140,8 +141,8 @@ void TerminalMot::DispatchCommand(char command) {
             break;
         case 'u':
         case 'U':
-            consoleDisplayArgs("%s: motor = %d, knob = %d\r\n",
-                m_name, m_motorPosition, m_knobPosition );
+            consoleDisplayArgs("%s: motor = %d, knob = %d, err = %d\r\n",
+                m_name, m_motorPosition, m_knobPosition, m_error );
     #if 1
             pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
             QP::QActive::PUBLISH(pe, this);
@@ -180,6 +181,7 @@ void TerminalMot::LoadCustomEvt(const CustomEvt* customEvent) {
     const PositionEvt* pe = static_cast<const PositionEvt*>(customEvent);
     int16_t position = pe->position;
     int16_t device = pe->device;
+    m_error = pe->error;
 
     if ( device == AO_MOTOR )
     {
@@ -189,6 +191,7 @@ void TerminalMot::LoadCustomEvt(const CustomEvt* customEvent) {
     {
         m_knobPosition = position;
     }
+
     #if 0
     consoleDisplayArgs("%s: custom sig, position = %d, device = %d\r\n",
         m_name, position, device);

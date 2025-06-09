@@ -58,7 +58,7 @@ void appSysTickHandler();
 void Q_SysTick_Handler(void);
 void encoderInit();
 int32_t encoderUpdate();
-uint32_t getMicros();
+uint64_t getMicros();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
