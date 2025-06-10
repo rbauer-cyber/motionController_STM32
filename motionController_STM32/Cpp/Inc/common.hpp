@@ -208,31 +208,6 @@ public:
     {}
 }; // class PositionEvt
 
-//${Shared::CMeasure} ........................................................
-class CMeasure {
-public:
-    std::uint64_t m_intervalStartTime;
-    std::uint64_t m_intervalEndTime;
-    std::uint32_t m_intervalElapsedTime;
-    std::uint32_t m_maxElapsedTimeDelta;
-    std::uint32_t m_intervalElapsedTimeDelta;
-    std::uint32_t m_intervalCount;
-    std::uint32_t m_minElapsedTimeDelta;
-    std::uint32_t m_avgElapsedTimeDelta;
-    const std::uint32_t kIntervalOffset;
-    std::uint32_t m_avgElapsedTime;
-    std::uint32_t m_intervalThresholdCount;
-    std::uint16_t m_updateCount;
-
-public:
-    void UpdateElapsedTime();
-    void DisplayElapsedTime();
-    void DisplayElapsedTimeDelta();
-    void Initialize();
-    void Start();
-    CMeasure();
-}; // class CMeasure
-
 } // namespace APP
 //$enddecl${Shared} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

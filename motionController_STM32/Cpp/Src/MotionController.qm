@@ -208,120 +208,6 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
    error(theError)</code>
    </operation>
   </class>
-  <!--${Shared::CMeasure}-->
-  <class name="CMeasure">
-   <!--${Shared::CMeasure::m_intervalStartTime}-->
-   <attribute name="m_intervalStartTime" type="std::uint64_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_intervalEndTime}-->
-   <attribute name="m_intervalEndTime" type="std::uint64_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_intervalElapsedTime}-->
-   <attribute name="m_intervalElapsedTime" type="std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_maxElapsedTimeDelta}-->
-   <attribute name="m_maxElapsedTimeDelta" type="std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_intervalElapsedTimeDelta}-->
-   <attribute name="m_intervalElapsedTimeDelta" type="std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_intervalCount}-->
-   <attribute name="m_intervalCount" type="std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_minElapsedTimeDelta}-->
-   <attribute name="m_minElapsedTimeDelta" type="std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_avgElapsedTimeDelta}-->
-   <attribute name="m_avgElapsedTimeDelta" type="std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::kIntervalOffset}-->
-   <attribute name="kIntervalOffset" type="const std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_avgElapsedTime}-->
-   <attribute name="m_avgElapsedTime" type="std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_intervalThresholdCount}-->
-   <attribute name="m_intervalThresholdCount" type="std::uint32_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::m_updateCount}-->
-   <attribute name="m_updateCount" type="std::uint16_t" visibility="0x00" properties="0x00"/>
-   <!--${Shared::CMeasure::UpdateElapsedTime}-->
-   <operation name="UpdateElapsedTime" type="void" visibility="0x00" properties="0x00">
-    <code>m_intervalEndTime = getMicros();
-uint32_t elapsedTime = m_intervalEndTime - m_intervalStartTime;
-uint32_t elapsedTimeDelta = 0;
-
-if ( elapsedTime &gt; 1000 )
-{
-    if ( m_updateCount &gt; kIntervalOffset )
-    {
-        if ( elapsedTime &gt; m_intervalElapsedTime )
-            elapsedTimeDelta = elapsedTime - m_intervalElapsedTime;
-        else
-            elapsedTimeDelta = m_intervalElapsedTime - elapsedTime;
-
-        m_intervalCount += 1;
-
-        if ( elapsedTimeDelta &gt; m_maxElapsedTimeDelta )
-        {
-            m_maxElapsedTimeDelta = elapsedTimeDelta;
-        }
-        if ( elapsedTimeDelta &lt; m_minElapsedTimeDelta )
-        {
-            m_minElapsedTimeDelta = elapsedTimeDelta;
-        }
-
-        m_avgElapsedTimeDelta += elapsedTimeDelta;
-        m_avgElapsedTime += elapsedTime;
-
-        if ( elapsedTimeDelta &gt; 100 )
-        {
-            m_intervalThresholdCount += 1;
-        }
-    }
-    else
-    {
-        m_updateCount += 1;
-    }
-
-    m_intervalElapsedTime = elapsedTime;
-}</code>
-   </operation>
-   <!--${Shared::CMeasure::DisplayElapsedTime}-->
-   <operation name="DisplayElapsedTime" type="void" visibility="0x00" properties="0x00">
-    <code>CONSOLE_DISPLAY_ARGS(&quot;elapsed time us = %d\r\n&quot;, m_intervalElapsedTime);</code>
-   </operation>
-   <!--${Shared::CMeasure::DisplayElapsedTimeDelta}-->
-   <operation name="DisplayElapsedTimeDelta" type="void" visibility="0x00" properties="0x00">
-    <code>if ( m_intervalCount &gt; 120 )
-{
-    m_avgElapsedTimeDelta = m_avgElapsedTimeDelta / m_intervalCount;
-    m_avgElapsedTime = m_avgElapsedTime / m_intervalCount;
-
-    CONSOLE_DISPLAY_ARGS(
-        &quot;max/min/avg/avg/cnt elapsed time delta us = %d/%d/%d/%d/%d\r\n&quot;,
-        m_maxElapsedTimeDelta, m_minElapsedTimeDelta,
-        m_avgElapsedTimeDelta, m_avgElapsedTime,
-        m_intervalThresholdCount);
-
-    m_maxElapsedTimeDelta = 0;
-    m_minElapsedTimeDelta = 10000;
-    m_avgElapsedTimeDelta = 0;
-    m_avgElapsedTime = 0;
-    m_intervalEndTime = getMicros();
-    m_intervalThresholdCount = 0;
-    m_intervalCount = 0;
-}</code>
-   </operation>
-   <!--${Shared::CMeasure::Initialize}-->
-   <operation name="Initialize" type="void" visibility="0x00" properties="0x00">
-    <code>m_intervalElapsedTime = 0;
-m_maxElapsedTimeDelta = 0;
-m_minElapsedTimeDelta = 10000;
-m_avgElapsedTimeDelta = 0;
-m_avgElapsedTime = 0;
-m_intervalCount = 0;
-m_intervalThresholdCount = 0;
-m_updateCount = 0;</code>
-   </operation>
-   <!--${Shared::CMeasure::Start}-->
-   <operation name="Start" type="void" visibility="0x00" properties="0x00">
-    <code>m_intervalStartTime = getMicros();</code>
-   </operation>
-   <!--${Shared::CMeasure::CMeasure}-->
-   <operation name="CMeasure" type="" visibility="0x00" properties="0x00">
-    <code>: kIntervalOffset(4)</code>
-   </operation>
-  </class>
  </package>
  <!--${AOs}-->
  <package name="AOs" stereotype="0x02" namespace="APP::">
@@ -1033,7 +919,7 @@ m_timeEvt.armX(time, 0);</code>
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
 consoleDisplay(&quot;Switch: starting\r\n&quot;);
 m_measure.Initialize();
-//CreateOneShotTimer(1000);</action>
+CreatePeriodicTimer(1000);</action>
      <initial_glyph color="3" conn="18,3,4,0,9">
       <action box="0,-2,10,2"/>
      </initial_glyph>
@@ -1050,7 +936,7 @@ if ( m_notifyCount &gt;= 1 )
     m_notifyCount = 0;
 }
 
-CreateOneShotTimer(1000);</entry>
+//CreateOneShotTimer(1000);</entry>
      <!--${AOs::Switch::SM::updateSwitchStat~::UPDATE_TIME}-->
      <tran trig="UPDATE_TIME" target="../../2">
       <action>m_measure.Start();</action>
@@ -1075,7 +961,7 @@ if ( m_initSystemState-- &gt; 1 )
     QP::QActive::PUBLISH(pe, this);
 }
 #endif
-CreateOneShotTimer(1000);</entry>
+//CreateOneShotTimer(1000);</entry>
      <!--${AOs::Switch::SM::readSwitch::UPDATE_TIME}-->
      <tran trig="UPDATE_TIME" target="../../1">
       <action>m_measure.UpdateElapsedTime();
@@ -1317,20 +1203,9 @@ $declare ${AOs::Knob}
 #include &lt;cstdint&gt;
 
 #include &quot;qpcpp.hpp&quot;             // QP/C++ real-time embedded framework
+#include &quot;measure.hpp&quot;
 
 $declare ${AOs::Switch}
-
-#endif</text>
-   </file>
-   <!--${.::../Inc::measure.hpp}-->
-   <file name="measure.hpp">
-    <text>#ifndef MEASURE_H
-#define MEASURE_H
-
-#include &quot;qpcpp.hpp&quot;             // QP/C++ real-time embedded framework
-#include &lt;cstdint&gt;
-
-$declare ${Shared::CMeasure}
 
 #endif</text>
    </file>
@@ -1687,14 +1562,6 @@ $declare ${AOs::TerminalMot}
 //----------------------------------------------------------------------------
 $define ${Shared::AO_TerminalMot}
 $define ${AOs::TerminalMot}</text>
-  </file>
-  <!--${.::measure.cpp}-->
-  <file name="measure.cpp">
-   <text>#include &quot;main.h&quot;
-#include &quot;measure.hpp&quot;
-#include &quot;console.h&quot;
-// ask QM to declare the Measure class
-$define ${Shared::CMeasure}</text>
   </file>
  </directory>
 </model>

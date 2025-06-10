@@ -132,7 +132,7 @@ Q_STATE_DEF(Switch, initial) {
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
     consoleDisplay("Switch: starting\r\n");
     m_measure.Initialize();
-    //CreateOneShotTimer(1000);
+    CreatePeriodicTimer(1000);
     return tran(&updateSwitchState);
 }
 
@@ -152,7 +152,7 @@ Q_STATE_DEF(Switch, updateSwitchState) {
                 m_notifyCount = 0;
             }
 
-            CreateOneShotTimer(1000);
+            //CreateOneShotTimer(1000);
             status_ = Q_RET_HANDLED;
             break;
         }
@@ -187,7 +187,7 @@ Q_STATE_DEF(Switch, readSwitch) {
                 QP::QActive::PUBLISH(pe, this);
             }
             #endif
-            CreateOneShotTimer(1000);
+            //CreateOneShotTimer(1000);
             status_ = Q_RET_HANDLED;
             break;
         }

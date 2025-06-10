@@ -41,6 +41,7 @@
 #include <cstdint>
 
 #include "qpcpp.hpp"             // QP/C++ real-time embedded framework
+#include "measure.hpp"
 
 //$declare${AOs::Switch} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace APP {
