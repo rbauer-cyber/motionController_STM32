@@ -139,6 +139,7 @@ Q_STATE_DEF(Knob, initial) {
     consoleDisplay("Knob: starting\r\n");
     subscribe(SHOW_STATE_SIG);
     //CreateOneShotTimer(1000);
+    CreatePeriodicTimer(1000);
     return tran(&idle);
 }
 
@@ -187,7 +188,7 @@ Q_STATE_DEF(Knob, idle) {
                 m_notifyCount = 0;
             }
 
-            CreateOneShotTimer(1000);
+            //CreateOneShotTimer(1000);
             status_ = Q_RET_HANDLED;
             break;
         }
@@ -214,7 +215,7 @@ Q_STATE_DEF(Knob, updatePosition) {
             m_position = BSP_readKnob();
             m_notifyCount += 1;
 
-            CreateOneShotTimer(1000);
+            //CreateOneShotTimer(1000);
             status_ = Q_RET_HANDLED;
             break;
         }

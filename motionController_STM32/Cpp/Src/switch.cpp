@@ -132,6 +132,7 @@ Q_STATE_DEF(Switch, initial) {
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
     consoleDisplay("Switch: starting\r\n");
     m_measure.Initialize();
+    //m_measure.Run();
     CreatePeriodicTimer(1000);
     return tran(&updateSwitchState);
 }

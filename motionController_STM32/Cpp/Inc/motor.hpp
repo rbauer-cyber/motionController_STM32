@@ -41,6 +41,7 @@
 #include <cstdint>
 
 #include "qpcpp.hpp"             // QP/C++ real-time embedded framework
+#include "measure.hpp"
 
 //#define POSITION_EVT
 
@@ -70,6 +71,9 @@ public:
 
 private:
     bool m_foundLimitSwitch;
+
+public:
+    CMeasure m_measure;
 
 private:
     std::int8_t MotionDone();

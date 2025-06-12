@@ -237,6 +237,8 @@ https://www.state-machine.com/qpcpp/exa.html</documentation>
    <attribute name="m_AO_Client" type="QP::QActive *" visibility="0x00" properties="0x00"/>
    <!--${AOs::Motor::m_foundLimitSwitch}-->
    <attribute name="m_foundLimitSwitch" type="bool" visibility="0x02" properties="0x00"/>
+   <!--${AOs::Motor::m_measure}-->
+   <attribute name="m_measure" type="CMeasure" visibility="0x00" properties="0x00"/>
    <!--${AOs::Motor::MotionDone}-->
    <operation name="MotionDone" type="std::int8_t" visibility="0x02" properties="0x00">
     <code>return AtDestination();</code>
@@ -324,6 +326,8 @@ subscribe(SHOW_STATE_SIG);</action>
      <!--${AOs::Motor::SM::MotionReady::initial}-->
      <initial target="../4">
       <action>consoleDisplay(&quot;Motor: starting\r\n&quot;);
+m_measure.Initialize(0,0,0);
+m_measure.Run();
 m_atLimitSwitch = 0;</action>
       <initial_glyph color="3" conn="12,11,5,0,24,6">
        <action box="0,-2,10,2"/>
@@ -377,6 +381,8 @@ MoveMotor();</action>
        <!--${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[MotionDone]}-->
        <choice target="../../../4">
         <guard brief="MotionDone">AtDestination()</guard>
+        <action>m_measure.UpdateElapsedTime();
+m_measure.DisplayElapsedTimeDelta();</action>
         <choice_glyph conn="29,56,5,2,10,-26">
          <action box="2,0,10,2"/>
         </choice_glyph>
@@ -472,7 +478,8 @@ else
        <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[NewPosition]}-->
        <choice target="../../../3">
         <guard brief="NewPosition">!AtDestination()</guard>
-        <action>consoleDisplayArgs(&quot;Motor: moving, increment: %d\r\n&quot;, m_increment);</action>
+        <action>consoleDisplayArgs(&quot;Motor: moving, increment: %d\r\n&quot;, m_increment);
+m_measure.Start();</action>
         <choice_glyph conn="21,38,4,0,8">
          <action box="1,1,10,2"/>
         </choice_glyph>
@@ -758,7 +765,8 @@ QP::QActive::PUBLISH(myEvt, this);</code>
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
 consoleDisplay(&quot;Knob: starting\r\n&quot;);
 subscribe(SHOW_STATE_SIG);
-//CreateOneShotTimer(1000);</action>
+//CreateOneShotTimer(1000);
+CreatePeriodicTimer(1000);</action>
      <initial_glyph color="3" conn="22,2,4,0,10">
       <action box="0,-2,10,2"/>
      </initial_glyph>
@@ -796,7 +804,7 @@ if ( m_notifyCount &gt;= 1 )
     m_notifyCount = 0;
 }
 
-CreateOneShotTimer(1000);</entry>
+//CreateOneShotTimer(1000);</entry>
       <!--${AOs::Knob::SM::running::idle::UPDATE_TIME}-->
       <tran trig="UPDATE_TIME" target="../../3">
        <tran_glyph color="1" conn="18,24,2,0,8">
@@ -813,7 +821,7 @@ CreateOneShotTimer(1000);</entry>
 m_position = BSP_readKnob();
 m_notifyCount += 1;
 
-CreateOneShotTimer(1000);</entry>
+//CreateOneShotTimer(1000);</entry>
       <!--${AOs::Knob::SM::running::updatePosition::UPDATE_TIME}-->
       <tran trig="UPDATE_TIME" target="../../2">
        <tran_glyph color="1" conn="33,32,0,2,-8">
@@ -919,6 +927,7 @@ m_timeEvt.armX(time, 0);</code>
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
 consoleDisplay(&quot;Switch: starting\r\n&quot;);
 m_measure.Initialize();
+//m_measure.Run();
 CreatePeriodicTimer(1000);</action>
      <initial_glyph color="3" conn="18,3,4,0,9">
       <action box="0,-2,10,2"/>
@@ -1162,6 +1171,7 @@ $declare ${Shared}
 #include &lt;cstdint&gt;
 
 #include &quot;qpcpp.hpp&quot;             // QP/C++ real-time embedded framework
+#include &quot;measure.hpp&quot;
 
 //#define POSITION_EVT
 

@@ -157,6 +157,8 @@ Q_STATE_DEF(Motor, MotionReady) {
         //${AOs::Motor::SM::MotionReady::initial}
         case Q_INIT_SIG: {
             consoleDisplay("Motor: starting\r\n");
+            m_measure.Initialize(0,0,0);
+            m_measure.Run();
             m_atLimitSwitch = 0;
             status_ = tran(&Stopped);
             break;
@@ -225,6 +227,8 @@ Q_STATE_DEF(Motor, Moving) {
             MoveMotor();
             //${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[MotionDone]}
             if (AtDestination()) {
+                m_measure.UpdateElapsedTime();
+                m_measure.DisplayElapsedTimeDelta();
                 status_ = tran(&Stopped);
             }
             //${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[else]}
@@ -314,6 +318,7 @@ Q_STATE_DEF(Motor, Stopped) {
             //${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[NewPosition]}
             else if (!AtDestination()) {
                 consoleDisplayArgs("Motor: moving, increment: %d\r\n", m_increment);
+                m_measure.Start();
                 status_ = tran(&Moving);
             }
             else {
