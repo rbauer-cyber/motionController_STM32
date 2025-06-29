@@ -91,7 +91,7 @@ std::uint8_t Knob::CheckKnobChanged() {
     if ( m_position != m_lastPosition )
     {
         m_lastPosition = m_position;
-        consoleDisplayArgs("Knob: notify, new position = %d\r\n", m_position);
+        consoleDisplayArgs("Knob: notify, new position: %d;\r\n", m_position);
         knobChanged = 1;
     }
 
@@ -136,7 +136,7 @@ Q_STATE_DEF(Knob, initial) {
     //${AOs::Knob::SM::initial}
     // Start periodic time to read knob position
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
-    consoleDisplay("Knob: starting\r\n");
+    consoleDisplay("Knob: starting;\r\n");
     subscribe(SHOW_STATE_SIG);
     //CreateOneShotTimer(1000);
     CreatePeriodicTimer(1000);
@@ -159,7 +159,7 @@ Q_STATE_DEF(Knob, running) {
         }
         //${AOs::Knob::SM::running::SHOW_STATE}
         case SHOW_STATE_SIG: {
-            consoleDisplayArgs("Knob: position: %d\r\n", m_position);
+            consoleDisplayArgs("Knob: position: %d;\r\n", m_position);
             PublishPositionEvent();
             status_ = Q_RET_HANDLED;
             break;

@@ -9,15 +9,15 @@
   <item name="backups">0</item>
  </group>
  <group name="windows">
-  <item id="AOs::Switch::SM">0,0,881,688,*</item>
-  <item id="AOs::MotionMgr::SM">64,55,817,665</item>
-  <item id="AOs::Knob::SM">241,240,640,480</item>
-  <item id="AOs::Motor::SM">196,0,685,621</item>
-  <item id=".::bsp.cpp">0,99,685,621</item>
-  <item id="BaseAOs::Terminal::SM">0,0,784,618</item>
-  <item id=".::../Inc::switch.hpp">285,0,596,300</item>
-  <item id=".::switch.cpp">0,420,596,300</item>
+  <item id="AOs::Switch::SM">-118,0,881,688</item>
+  <item id="AOs::MotionMgr::SM">0,30,817,665</item>
+  <item id="AOs::Knob::SM">0,0,685,621</item>
+  <item id="AOs::Motor::SM">93,34,670,661</item>
+  <item id=".::bsp.cpp">0,74,685,621</item>
+  <item id=".::../Inc::switch.hpp">0,0,763,663,*</item>
+  <item id=".::switch.cpp">167,395,596,300</item>
   <item id=".::terminalMot.cpp">0,0,596,300</item>
+  <item id=".::../Inc::motor.hpp">0,395,596,300</item>
  </group>
  <group name="search">
   <item name="options">2032128</item>

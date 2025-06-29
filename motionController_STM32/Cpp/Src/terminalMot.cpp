@@ -40,6 +40,8 @@
 #include "terminal.hpp"          // Base class for TerminalDpp
 #include "bsp.hpp"               // Board Support Package
 #include "console.h"
+#include <string>
+#include <cctype>
 
 //$declare${AOs::TerminalMot} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace APP {
@@ -60,6 +62,7 @@ public:
     void RotateKnobCW();
     void RotateKnobCCW();
     void LoadCustomEvt(const CustomEvt* customEvent) override;
+    int ExtractNumber(char input[]);
 }; // class TerminalMot
 
 } // namespace APP
@@ -117,7 +120,8 @@ void TerminalMot::DispatchCommand(char command) {
         case 'm':
         case 'M':
             pe = Q_NEW(MoveEvt, MOVE_SIG);
-            pe->position = 1000;
+            //pe->position = 1000;
+            pe->position = ExtractNumber(m_input);
             AO_Motor->POST(pe, this);
             break;
         case 'k':
@@ -141,7 +145,7 @@ void TerminalMot::DispatchCommand(char command) {
             break;
         case 'u':
         case 'U':
-            consoleDisplayArgs("%s: motor = %d, knob = %d, err = %d\r\n",
+            consoleDisplayArgs("%s: motor: %d, knob: %d, err: %d;\r\n",
                 m_name, m_motorPosition, m_knobPosition, m_error );
     #if 1
             pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
@@ -152,13 +156,13 @@ void TerminalMot::DispatchCommand(char command) {
     #endif
             break;
         case '+':
-            m_motorPosition += 1000;
+            m_motorPosition += 1024;
             pe = Q_NEW(MoveEvt, MOVE_SIG);
             pe->position = m_motorPosition;
             AO_Motor->POST(pe, this);
             break;
         case '-':
-            m_motorPosition -= 1000;
+            m_motorPosition -= 1024;
             pe = Q_NEW(MoveEvt, MOVE_SIG);
             pe->position = m_motorPosition;
             AO_Motor->POST(pe, this);
@@ -193,9 +197,26 @@ void TerminalMot::LoadCustomEvt(const CustomEvt* customEvent) {
     }
 
     #if 0
-    consoleDisplayArgs("%s: custom sig, position = %d, device = %d\r\n",
+    consoleDisplayArgs("%s: custom sig, position: %d, device: %d;\r\n",
         m_name, position, device);
     #endif
+}
+
+//${AOs::TerminalMot::ExtractNumber} .........................................
+int TerminalMot::ExtractNumber(char input[]) {
+    int number = 0;
+
+    for (size_t i = 0; i < m_replySize; i++)
+    {
+        // Find start of number in  input string
+        if ( std::isdigit(m_input[i]) )
+        {
+            number = atoi(m_input+i);
+            break;
+        }
+    }
+
+    return number;
 }
 
 } // namespace APP

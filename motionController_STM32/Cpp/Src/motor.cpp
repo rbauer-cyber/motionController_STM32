@@ -156,7 +156,7 @@ Q_STATE_DEF(Motor, MotionReady) {
     switch (e->sig) {
         //${AOs::Motor::SM::MotionReady::initial}
         case Q_INIT_SIG: {
-            consoleDisplay("Motor: starting\r\n");
+            consoleDisplay("Motor: starting;\r\n");
             m_measure.Initialize(0,0,0);
             m_measure.Run();
             m_atLimitSwitch = 0;
@@ -169,7 +169,7 @@ Q_STATE_DEF(Motor, MotionReady) {
 
             if ( switchState == 0 ) {
                 if ( m_increment < 0 && m_atLimitSwitch == 0 ) {
-                    consoleDisplay("Motor: limit switch closed\r\n");
+                    consoleDisplay("Motor: limit switch closed;\r\n");
                 }
                 m_atLimitSwitch = 1;
             }
@@ -181,7 +181,7 @@ Q_STATE_DEF(Motor, MotionReady) {
         }
         //${AOs::Motor::SM::MotionReady::SHOW_STATE}
         case SHOW_STATE_SIG: {
-            consoleDisplayArgs("Motor: position: %d, moving: %d, limit: %d\r\n",
+            consoleDisplayArgs("Motor: position: %d, moving: %d, limit: %d;\r\n",
                 m_position, m_moving, m_atLimitSwitch);
 
             PublishPositionEvent();
@@ -235,10 +235,10 @@ Q_STATE_DEF(Motor, Moving) {
             else {
                 //${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[else]::[AtLimitSwitch]}
                 if (m_atLimitSwitch == 1) {
-                    consoleDisplay("Motor: stopped by limit switch\r\n");
+                    consoleDisplay("Motor: stopped by limit switch;\r\n");
 
                     if ( m_findingLimit ) {
-                        consoleDisplay("Motor: found switch, setting home position\r\n");
+                        consoleDisplay("Motor: found switch, setting home position;\r\n");
                         m_foundLimitSwitch = true;
                         m_position = 0;
                     }
@@ -269,7 +269,7 @@ Q_STATE_DEF(Motor, Stopped) {
         //${AOs::Motor::SM::MotionReady::Stopped}
         case Q_ENTRY_SIG: {
             if ( m_moving ) {
-                consoleDisplayArgs("Motor: stopped, position = %d\r\n", m_position);
+                consoleDisplayArgs("Motor: stopped, position: %d;\r\n", m_position);
 
                 if ( m_error == ERROR_NONE ) {
                     SendMotionDoneEvent();
@@ -297,27 +297,27 @@ Q_STATE_DEF(Motor, Stopped) {
 
             if ( Q_EVT_CAST(MoveEvt)->sig == FIND_LIMIT_SIG )
             {
-                consoleDisplay("Motor: finding limit\r\n");
+                consoleDisplay("Motor: finding limit;\r\n");
                 m_findingLimit = 1;
             }
 
-            consoleDisplayArgs("Motor: requested position = %d, position = %d\r\n",
+            consoleDisplayArgs("Motor: requested position: %d, position: %d;\r\n",
                 newPosition, m_position);
             //${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[AtPositionOrAtLimit]}
             if (AtDestination() || (m_increment < 0 && m_atLimitSwitch)) {
                 if ( m_atLimitSwitch )
                 {
-                    consoleDisplay("Motor: no move, at limit switch\r\n");
+                    consoleDisplay("Motor: no move, at limit switch;\r\n");
                 }
                 else
                 {
-                    consoleDisplay("Motor: no move, already at position\r\n");
+                    consoleDisplay("Motor: no move, already at position;\r\n");
                 }
                 status_ = tran(&Stopped);
             }
             //${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[NewPosition]}
             else if (!AtDestination()) {
-                consoleDisplayArgs("Motor: moving, increment: %d\r\n", m_increment);
+                consoleDisplayArgs("Motor: moving, increment: %d;\r\n", m_increment);
                 m_measure.Start();
                 status_ = tran(&Moving);
             }

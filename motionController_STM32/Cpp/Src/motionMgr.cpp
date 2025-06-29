@@ -101,8 +101,8 @@ void MotionMgr::ChangeKnobPosition(std::uint8_t knobPosition) {
     int newPosition = m_currentPosition + positionIncrement;
 
     m_requestPosition = newPosition;
-    consoleDisplayArgs("\r\n%s: knob position = %d\r\n", m_name, knobPosition);
-    consoleDisplayArgs("%s: requested motor position = %d\r\n", m_name, newPosition);
+    consoleDisplayArgs("\r\n%s: knob position: %d;\r\n", m_name, knobPosition);
+    consoleDisplayArgs("%s: requested motor position: %d;\r\n", m_name, newPosition);
     m_knobPosition = knobPosition;
 
     SendMoveEvent(newPosition);
@@ -119,12 +119,12 @@ void MotionMgr::CreateOneShotTimer(uint32_t time) {
 //${AOs::MotionMgr::ReceiveMotorMovedEvt} ....................................
 void MotionMgr::ReceiveMotorMovedEvt(QP::QEvt const * e) {
     int16_t position = Q_EVT_CAST(MovedEvt)->position;
-    consoleDisplayArgs("%s: moved event\r\n", m_name);
+    consoleDisplayArgs("%s: moved event;\r\n", m_name);
 
     if ( m_currentPosition != position )
     {
         m_currentPosition = position;
-        consoleDisplayArgs("%s: motor position = %d\r\n", m_name, position);
+        consoleDisplayArgs("%s: motor position: %d;\r\n", m_name, position);
     }
 }
 
@@ -134,8 +134,19 @@ void MotionMgr::ReceiveMotorErrorEvt(QP::QEvt const * e) {
     uint8_t error = Q_EVT_CAST(MoveErrorEvt)->error;
     m_currentPosition = position;
 
-    consoleDisplayArgs("%s: motor error = %d, position = %d\r\n",
+    consoleDisplayArgs("%s: motor error: %d, position: %d;\r\n",
                         m_name, error, position );
+}
+
+//${AOs::MotionMgr::MoveHome} ................................................
+void MotionMgr::MoveHome() {
+    // Move motor to HOME, position 0
+    //int positionIncrement = m_currentPosition * -1;
+    int newPosition = 0;
+    m_requestPosition = newPosition;
+    consoleDisplayArgs("%s: requested motor position: %d;\r\n", m_name, newPosition);
+
+    SendMoveEvent(newPosition);
 }
 
 //${AOs::MotionMgr::SM} ......................................................
@@ -143,7 +154,7 @@ Q_STATE_DEF(MotionMgr, initial) {
     //${AOs::MotionMgr::SM::initial}
     //(void)par; // unused parameter
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
-    consoleDisplayArgs("%s: starting\r\n", m_name);
+    consoleDisplayArgs("%s: starting;\r\n", m_name);
     return tran(&idle);
 }
 
@@ -153,15 +164,15 @@ Q_STATE_DEF(MotionMgr, idle) {
     switch (e->sig) {
         //${AOs::MotionMgr::SM::idle}
         case Q_ENTRY_SIG: {
-            consoleDisplayArgs("%s: idle\r\n", m_name);
+            consoleDisplayArgs("%s: idle;\r\n", m_name);
             status_ = Q_RET_HANDLED;
             break;
         }
         //${AOs::MotionMgr::SM::idle::HOME}
         case HOME_SIG: {
             // Send HOME event to initialize system
-            consoleDisplayArgs("%s: homing motor\r\n", m_name);
-            SendFindLimitEvent();
+            consoleDisplayArgs("%s: homing motor;\r\n", m_name);
+            MoveHome();
             status_ = tran(&moving);
             break;
         }

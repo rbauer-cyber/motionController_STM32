@@ -95,7 +95,7 @@ uint8_t Switch::CheckSwitchChanged() {
         if ( m_state != m_lastState )
         {
             m_lastState = m_state;
-            consoleDisplayArgs("Switch: notify, new state = %d\r\n", m_state);
+            consoleDisplayArgs("Switch: notify, new state: %d;\r\n", m_state);
             switchChanged = 1;
         }
     }
@@ -130,7 +130,7 @@ Q_STATE_DEF(Switch, initial) {
     //${AOs::Switch::SM::initial}
     // Start periodic time to read switch position
     m_AO_Client = Q_EVT_CAST(ClientEvt)->client;
-    consoleDisplay("Switch: starting\r\n");
+    consoleDisplay("Switch: starting;\r\n");
     m_measure.Initialize();
     //m_measure.Run();
     CreatePeriodicTimer(1000);

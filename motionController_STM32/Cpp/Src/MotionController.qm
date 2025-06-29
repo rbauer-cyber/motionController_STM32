@@ -325,7 +325,7 @@ subscribe(SHOW_STATE_SIG);</action>
     <state name="MotionReady">
      <!--${AOs::Motor::SM::MotionReady::initial}-->
      <initial target="../4">
-      <action>consoleDisplay(&quot;Motor: starting\r\n&quot;);
+      <action>consoleDisplay(&quot;Motor: starting;\r\n&quot;);
 m_measure.Initialize(0,0,0);
 m_measure.Run();
 m_atLimitSwitch = 0;</action>
@@ -339,7 +339,7 @@ m_atLimitSwitch = 0;</action>
 
 if ( switchState == 0 ) {
     if ( m_increment &lt; 0 &amp;&amp; m_atLimitSwitch == 0 ) {
-        consoleDisplay(&quot;Motor: limit switch closed\r\n&quot;);
+        consoleDisplay(&quot;Motor: limit switch closed;\r\n&quot;);
     }
     m_atLimitSwitch = 1;
 }
@@ -352,7 +352,7 @@ else if ( switchState == 1 ) {
      </tran>
      <!--${AOs::Motor::SM::MotionReady::SHOW_STATE}-->
      <tran trig="SHOW_STATE">
-      <action>consoleDisplayArgs(&quot;Motor: position: %d, moving: %d, limit: %d\r\n&quot;,
+      <action>consoleDisplayArgs(&quot;Motor: position: %d, moving: %d, limit: %d;\r\n&quot;,
     m_position, m_moving, m_atLimitSwitch);
 
 PublishPositionEvent();</action>
@@ -393,10 +393,10 @@ m_measure.DisplayElapsedTimeDelta();</action>
         <!--${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[else]::[AtLimitSwitch]}-->
         <choice target="../../../../4">
          <guard brief="At Limit Switch">m_atLimitSwitch == 1</guard>
-         <action>consoleDisplay(&quot;Motor: stopped by limit switch\r\n&quot;);
+         <action>consoleDisplay(&quot;Motor: stopped by limit switch;\r\n&quot;);
 
 if ( m_findingLimit ) {
-    consoleDisplay(&quot;Motor: found switch, setting home position\r\n&quot;);
+    consoleDisplay(&quot;Motor: found switch, setting home position;\r\n&quot;);
     m_foundLimitSwitch = true;
     m_position = 0;
 }
@@ -430,7 +430,7 @@ else {
      <!--${AOs::Motor::SM::MotionReady::Stopped}-->
      <state name="Stopped">
       <entry brief="Notify Client">if ( m_moving ) {
-    consoleDisplayArgs(&quot;Motor: stopped, position = %d\r\n&quot;, m_position);
+    consoleDisplayArgs(&quot;Motor: stopped, position: %d;\r\n&quot;, m_position);
 
     if ( m_error == ERROR_NONE ) {
         SendMotionDoneEvent();
@@ -454,22 +454,22 @@ m_error = ERROR_NONE;
 
 if ( Q_EVT_CAST(MoveEvt)-&gt;sig == FIND_LIMIT_SIG )
 {
-    consoleDisplay(&quot;Motor: finding limit\r\n&quot;);
+    consoleDisplay(&quot;Motor: finding limit;\r\n&quot;);
     m_findingLimit = 1;
 }
 
-consoleDisplayArgs(&quot;Motor: requested position = %d, position = %d\r\n&quot;,
+consoleDisplayArgs(&quot;Motor: requested position: %d, position: %d;\r\n&quot;,
     newPosition, m_position);</action>
        <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[AtPositionOrAtLimit]}-->
        <choice target="../..">
         <guard brief="AtPositionOrAtLimit">AtDestination() || (m_increment &lt; 0 &amp;&amp; m_atLimitSwitch)</guard>
         <action>if ( m_atLimitSwitch )
 {
-    consoleDisplay(&quot;Motor: no move, at limit switch\r\n&quot;);
+    consoleDisplay(&quot;Motor: no move, at limit switch;\r\n&quot;);
 }
 else
 {
-    consoleDisplay(&quot;Motor: no move, already at position\r\n&quot;);
+    consoleDisplay(&quot;Motor: no move, already at position;\r\n&quot;);
 }</action>
         <choice_glyph conn="21,38,5,2,10,-8">
          <action box="1,-3,17,2"/>
@@ -478,7 +478,7 @@ else
        <!--${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[NewPosition]}-->
        <choice target="../../../3">
         <guard brief="NewPosition">!AtDestination()</guard>
-        <action>consoleDisplayArgs(&quot;Motor: moving, increment: %d\r\n&quot;, m_increment);
+        <action>consoleDisplayArgs(&quot;Motor: moving, increment: %d;\r\n&quot;, m_increment);
 m_measure.Start();</action>
         <choice_glyph conn="21,38,4,0,8">
          <action box="1,1,10,2"/>
@@ -554,8 +554,8 @@ int positionIncrement = knobIncrement * m_motorIncrement;
 int newPosition = m_currentPosition + positionIncrement;
 
 m_requestPosition = newPosition;
-consoleDisplayArgs(&quot;\r\n%s: knob position = %d\r\n&quot;, m_name, knobPosition);
-consoleDisplayArgs(&quot;%s: requested motor position = %d\r\n&quot;, m_name, newPosition);
+consoleDisplayArgs(&quot;\r\n%s: knob position: %d;\r\n&quot;, m_name, knobPosition);
+consoleDisplayArgs(&quot;%s: requested motor position: %d;\r\n&quot;, m_name, newPosition);
 m_knobPosition = knobPosition;
 
 SendMoveEvent(newPosition);</code>
@@ -574,12 +574,12 @@ m_timeEvt.armX(time, 0U);</code>
     <!--${AOs::MotionMgr::ReceiveMotorMove~::e}-->
     <parameter name="e" type="QP::QEvt const *"/>
     <code>int16_t position = Q_EVT_CAST(MovedEvt)-&gt;position;
-consoleDisplayArgs(&quot;%s: moved event\r\n&quot;, m_name);
+consoleDisplayArgs(&quot;%s: moved event;\r\n&quot;, m_name);
 
 if ( m_currentPosition != position )
 {
     m_currentPosition = position;
-    consoleDisplayArgs(&quot;%s: motor position = %d\r\n&quot;, m_name, position);
+    consoleDisplayArgs(&quot;%s: motor position: %d;\r\n&quot;, m_name, position);
 }</code>
    </operation>
    <!--${AOs::MotionMgr::ReceiveMotorErrorEvt}-->
@@ -590,8 +590,18 @@ if ( m_currentPosition != position )
 uint8_t error = Q_EVT_CAST(MoveErrorEvt)-&gt;error;
 m_currentPosition = position;
 
-consoleDisplayArgs(&quot;%s: motor error = %d, position = %d\r\n&quot;,
+consoleDisplayArgs(&quot;%s: motor error: %d, position: %d;\r\n&quot;,
                     m_name, error, position );</code>
+   </operation>
+   <!--${AOs::MotionMgr::MoveHome}-->
+   <operation name="MoveHome" type="void" visibility="0x00" properties="0x00">
+    <code>// Move motor to HOME, position 0
+//int positionIncrement = m_currentPosition * -1;
+int newPosition = 0;
+m_requestPosition = newPosition;
+consoleDisplayArgs(&quot;%s: requested motor position: %d;\r\n&quot;, m_name, newPosition);
+
+SendMoveEvent(newPosition);</code>
    </operation>
    <!--${AOs::MotionMgr::SM}-->
    <statechart properties="0x01">
@@ -600,19 +610,19 @@ consoleDisplayArgs(&quot;%s: motor error = %d, position = %d\r\n&quot;,
     <initial target="../1">
      <action>//(void)par; // unused parameter
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
-consoleDisplayArgs(&quot;%s: starting\r\n&quot;, m_name);</action>
+consoleDisplayArgs(&quot;%s: starting;\r\n&quot;, m_name);</action>
      <initial_glyph color="3" conn="26,4,4,0,9">
       <action box="0,-2,10,2"/>
      </initial_glyph>
     </initial>
     <!--${AOs::MotionMgr::SM::idle}-->
     <state name="idle">
-     <entry>consoleDisplayArgs(&quot;%s: idle\r\n&quot;, m_name);</entry>
+     <entry>consoleDisplayArgs(&quot;%s: idle;\r\n&quot;, m_name);</entry>
      <!--${AOs::MotionMgr::SM::idle::HOME}-->
      <tran trig="HOME" target="../../2">
       <action>// Send HOME event to initialize system
-consoleDisplayArgs(&quot;%s: homing motor\r\n&quot;, m_name);
-SendFindLimitEvent();</action>
+consoleDisplayArgs(&quot;%s: homing motor;\r\n&quot;, m_name);
+MoveHome();</action>
       <tran_glyph color="1" conn="26,25,2,0,16">
        <action box="0,5,8,2"/>
       </tran_glyph>
@@ -719,7 +729,7 @@ m_AO_Client-&gt;POST(pEvt, this);</code>
 if ( m_position != m_lastPosition )
 {
     m_lastPosition = m_position;
-    consoleDisplayArgs(&quot;Knob: notify, new position = %d\r\n&quot;, m_position);
+    consoleDisplayArgs(&quot;Knob: notify, new position: %d;\r\n&quot;, m_position);
     knobChanged = 1;
 }
 
@@ -763,7 +773,7 @@ QP::QActive::PUBLISH(myEvt, this);</code>
     <initial target="../1/2">
      <action>// Start periodic time to read knob position
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
-consoleDisplay(&quot;Knob: starting\r\n&quot;);
+consoleDisplay(&quot;Knob: starting;\r\n&quot;);
 subscribe(SHOW_STATE_SIG);
 //CreateOneShotTimer(1000);
 CreatePeriodicTimer(1000);</action>
@@ -786,7 +796,7 @@ BSP_setPositionKnob(knobPosition);</action>
      </tran>
      <!--${AOs::Knob::SM::running::SHOW_STATE}-->
      <tran trig="SHOW_STATE">
-      <action>consoleDisplayArgs(&quot;Knob: position: %d\r\n&quot;, m_position);
+      <action>consoleDisplayArgs(&quot;Knob: position: %d;\r\n&quot;, m_position);
 PublishPositionEvent();</action>
       <tran_glyph color="1" conn="46,49,2,-1,-11">
        <action box="-5,-7,13,2"/>
@@ -889,7 +899,7 @@ if ( m_state == switchState )
     if ( m_state != m_lastState )
     {
         m_lastState = m_state;
-        consoleDisplayArgs(&quot;Switch: notify, new state = %d\r\n&quot;, m_state);
+        consoleDisplayArgs(&quot;Switch: notify, new state: %d;\r\n&quot;, m_state);
         switchChanged = 1;
     }
 }
@@ -925,7 +935,7 @@ m_timeEvt.armX(time, 0);</code>
     <initial target="../1">
      <action>// Start periodic time to read switch position
 m_AO_Client = Q_EVT_CAST(ClientEvt)-&gt;client;
-consoleDisplay(&quot;Switch: starting\r\n&quot;);
+consoleDisplay(&quot;Switch: starting;\r\n&quot;);
 m_measure.Initialize();
 //m_measure.Run();
 CreatePeriodicTimer(1000);</action>
@@ -1033,7 +1043,8 @@ switch ( command ) {
     case 'm':
     case 'M':
         pe = Q_NEW(MoveEvt, MOVE_SIG);
-        pe-&gt;position = 1000;
+        //pe-&gt;position = 1000;
+        pe-&gt;position = ExtractNumber(m_input);
         AO_Motor-&gt;POST(pe, this);
         break;
     case 'k':
@@ -1057,7 +1068,7 @@ switch ( command ) {
         break;
     case 'u':
     case 'U':
-        consoleDisplayArgs(&quot;%s: motor = %d, knob = %d, err = %d\r\n&quot;,
+        consoleDisplayArgs(&quot;%s: motor: %d, knob: %d, err: %d;\r\n&quot;,
             m_name, m_motorPosition, m_knobPosition, m_error );
 #if 1
         pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
@@ -1068,13 +1079,13 @@ switch ( command ) {
 #endif
         break;
     case '+':
-        m_motorPosition += 1000;
+        m_motorPosition += 1024;
         pe = Q_NEW(MoveEvt, MOVE_SIG);
         pe-&gt;position = m_motorPosition;
         AO_Motor-&gt;POST(pe, this);
         break;
     case '-':
-        m_motorPosition -= 1000;
+        m_motorPosition -= 1024;
         pe = Q_NEW(MoveEvt, MOVE_SIG);
         pe-&gt;position = m_motorPosition;
         AO_Motor-&gt;POST(pe, this);
@@ -1109,9 +1120,27 @@ else if ( device == AO_KNOB )
 }
 
 #if 0
-consoleDisplayArgs(&quot;%s: custom sig, position = %d, device = %d\r\n&quot;,
+consoleDisplayArgs(&quot;%s: custom sig, position: %d, device: %d;\r\n&quot;,
     m_name, position, device);
 #endif</code>
+   </operation>
+   <!--${AOs::TerminalMot::ExtractNumber}-->
+   <operation name="ExtractNumber" type="int" visibility="0x00" properties="0x00">
+    <!--${AOs::TerminalMot::ExtractNumber::input[]}-->
+    <parameter name="input[]" type="char"/>
+    <code>int number = 0;
+
+for (size_t i = 0; i &lt; m_replySize; i++)
+{
+    // Find start of number in  input string
+    if ( std::isdigit(m_input[i]) )
+    {
+        number = atoi(m_input+i);
+        break;
+    }
+}
+
+return number;</code>
    </operation>
   </class>
  </package>
@@ -1566,6 +1595,8 @@ int bspMain() {
 #include &quot;terminal.hpp&quot;          // Base class for TerminalDpp 
 #include &quot;bsp.hpp&quot;               // Board Support Package
 #include &quot;console.h&quot;
+#include &lt;string&gt;
+#include &lt;cctype&gt;
 
 $declare ${AOs::TerminalMot}
 

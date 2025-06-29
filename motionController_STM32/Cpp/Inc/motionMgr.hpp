@@ -72,6 +72,9 @@ private:
     void ReceiveMotorMovedEvt(QP::QEvt const * e);
     void ReceiveMotorErrorEvt(QP::QEvt const * e);
 
+public:
+    void MoveHome();
+
 protected:
     Q_STATE_DECL(initial);
     Q_STATE_DECL(idle);
