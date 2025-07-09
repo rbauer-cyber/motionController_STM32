@@ -119,12 +119,16 @@ void MotionMgr::CreateOneShotTimer(uint32_t time) {
 //${AOs::MotionMgr::ReceiveMotorMovedEvt} ....................................
 void MotionMgr::ReceiveMotorMovedEvt(QP::QEvt const * e) {
     int16_t position = Q_EVT_CAST(MovedEvt)->position;
+    m_currentPosition = position;
     consoleDisplayArgs("%s: moved event;\r\n", m_name);
+    consoleDisplayArgs("%s: motor position: %d;\r\n", m_name, position);
 
-    if ( m_currentPosition != position )
+    // Send command completion message
+    consoleDisplay("OK;\r\n");
+
+    if ( m_findingLimit )
     {
-        m_currentPosition = position;
-        consoleDisplayArgs("%s: motor position: %d;\r\n", m_name, position);
+        m_findingLimit = 0;
     }
 }
 
@@ -136,6 +140,9 @@ void MotionMgr::ReceiveMotorErrorEvt(QP::QEvt const * e) {
 
     consoleDisplayArgs("%s: motor error: %d, position: %d;\r\n",
                         m_name, error, position );
+
+    // Send command error message
+    consoleDisplay("ERROR;\r\n");
 }
 
 //${AOs::MotionMgr::MoveHome} ................................................
@@ -144,9 +151,63 @@ void MotionMgr::MoveHome() {
     //int positionIncrement = m_currentPosition * -1;
     int newPosition = 0;
     m_requestPosition = newPosition;
-    consoleDisplayArgs("%s: requested motor position: %d;\r\n", m_name, newPosition);
+    consoleDisplayArgs("%s: requested motor position: %d;\r\n",
+        m_name, newPosition);
 
     SendMoveEvent(newPosition);
+}
+
+//${AOs::MotionMgr::MoveToPosition} ..........................................
+void MotionMgr::MoveToPosition(std::uint16_t position) {
+    // Move motor to position
+    m_requestPosition = position;
+
+    consoleDisplayArgs("%s: requested position: %d, position: %d;\r\n",
+        m_name, m_requestPosition, m_currentPosition);
+
+    SendMoveEvent(position);
+}
+
+//${AOs::MotionMgr::FindLimit} ...............................................
+void MotionMgr::FindLimit(std::uint16_t position) {
+    // Move motor to limit
+    m_requestPosition = position;
+    m_findingLimit = 1;
+
+    consoleDisplayArgs("%s: finding limit, position: %d;\r\n",
+        m_name, m_requestPosition);
+
+    SendFindLimitEvent();
+}
+
+//${AOs::MotionMgr::SendStopEvent} ...........................................
+void MotionMgr::SendStopEvent() {
+    // Request motor stop
+    MoveEvt *myEvt = Q_NEW(MoveEvt, STOP_SIG);
+    m_AO_Client->POST(myEvt, this);
+}
+
+//${AOs::MotionMgr::ReceiveSyncEvt} ..........................................
+void MotionMgr::ReceiveSyncEvt(QP::QEvt const * e) {
+    consoleDisplayArgs("%s: motor position: %d, knob: %d;\r\n",
+        m_name, m_currentPosition, m_knobPosition);
+
+    // Publish position of motor to command dispatcher
+    PositionEvt *knobEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+    knobEvt->position = m_currentPosition;
+    knobEvt->device = AO_MOTOR;
+    knobEvt->error = m_error;
+    QP::QActive::PUBLISH(knobEvt, this);
+
+    // Publish position of knob to command dispatcher
+    PositionEvt *motorEvt = Q_NEW(PositionEvt, CUSTOM_SIG);
+    motorEvt->position = m_knobPosition;
+    motorEvt->device = AO_KNOB;
+    motorEvt->error = m_error;
+    QP::QActive::PUBLISH(motorEvt, this);
+
+    // Send command error message
+    consoleDisplay("OK;\r\n");
 }
 
 //${AOs::MotionMgr::SM} ......................................................
@@ -164,7 +225,7 @@ Q_STATE_DEF(MotionMgr, idle) {
     switch (e->sig) {
         //${AOs::MotionMgr::SM::idle}
         case Q_ENTRY_SIG: {
-            consoleDisplayArgs("%s: idle;\r\n", m_name);
+            //consoleDisplayArgs("%s: idle;\r\n", m_name);
             status_ = Q_RET_HANDLED;
             break;
         }
@@ -191,19 +252,43 @@ Q_STATE_DEF(MotionMgr, idle) {
             }
             break;
         }
-        //${AOs::MotionMgr::SM::idle::MOVED}
-        case MOVED_SIG: {
+        //${AOs::MotionMgr::SM::idle::SYNC}
+        case SYNC_SIG: {
             // This transition intended to catch events resulting from another AO
             // causing motor movement.
-            ReceiveMotorMovedEvt(e);
+            ReceiveSyncEvt(e);
             status_ = Q_RET_HANDLED;
             break;
         }
-        //${AOs::MotionMgr::SM::idle::MOVE_ERROR}
-        case MOVE_ERROR_SIG: {
-            // Received error event from motor
-            ReceiveMotorErrorEvt(e);
+        //${AOs::MotionMgr::SM::idle::STOP}
+        case STOP_SIG: {
+            // Motor already stopped
+            consoleDisplay("OK;\r\n");
             status_ = Q_RET_HANDLED;
+            break;
+        }
+        //${AOs::MotionMgr::SM::idle::MOVE, FIND_LIMIT}
+        case MOVE_SIG: // intentionally fall through
+        case FIND_LIMIT_SIG: {
+            int16_t newPosition = Q_EVT_CAST(MoveEvt)->position;
+            m_requestPosition = newPosition;
+            m_motorIncrement = m_requestPosition - m_currentPosition;
+            m_error = ERROR_NONE;
+
+            if ( Q_EVT_CAST(MoveEvt)->sig == FIND_LIMIT_SIG )
+            {
+                consoleDisplayArgs("%s: finding limit;\r\n", m_name);
+                m_findingLimit = 1;
+                FindLimit(newPosition);
+            }
+            else
+            {
+                consoleDisplayArgs("%s: moving motor;\r\n", m_name);
+                MoveToPosition(newPosition);
+            }
+
+
+            status_ = tran(&moving);
             break;
         }
         default: {
@@ -230,6 +315,12 @@ Q_STATE_DEF(MotionMgr, moving) {
             // Received error event from motor
             ReceiveMotorErrorEvt(e);
             status_ = tran(&idle);
+            break;
+        }
+        //${AOs::MotionMgr::SM::moving::STOP}
+        case STOP_SIG: {
+            SendStopEvent();
+            status_ = Q_RET_HANDLED;
             break;
         }
         default: {

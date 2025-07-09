@@ -142,6 +142,17 @@ bool Motor::AtDestination() {
     return m_position == m_positionRequest;
 }
 
+//${AOs::Motor::SendMotorStoppedMessage} .....................................
+void Motor::SendMotorStoppedMessage() {
+    consoleDisplayArgs("Motor: stopped, position: %d;\r\n", m_position);
+}
+
+//${AOs::Motor::SendMotorPositionMessage} ....................................
+void Motor::SendMotorPositionMessage() {
+    consoleDisplayArgs("Motor: position: %d, moving: %d, limit: %d;\r\n",
+        m_position, m_moving, m_atLimitSwitch);
+}
+
 //${AOs::Motor::SM} ..........................................................
 Q_STATE_DEF(Motor, initial) {
     //${AOs::Motor::SM::initial}
@@ -181,9 +192,7 @@ Q_STATE_DEF(Motor, MotionReady) {
         }
         //${AOs::Motor::SM::MotionReady::SHOW_STATE}
         case SHOW_STATE_SIG: {
-            consoleDisplayArgs("Motor: position: %d, moving: %d, limit: %d;\r\n",
-                m_position, m_moving, m_atLimitSwitch);
-
+            //SendMotorPositionMessage();
             PublishPositionEvent();
             status_ = Q_RET_HANDLED;
             break;
@@ -228,7 +237,7 @@ Q_STATE_DEF(Motor, Moving) {
             //${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[MotionDone]}
             if (AtDestination()) {
                 m_measure.UpdateElapsedTime();
-                m_measure.DisplayElapsedTimeDelta();
+                //m_measure.DisplayElapsedTimeDelta();
                 status_ = tran(&Stopped);
             }
             //${AOs::Motor::SM::MotionReady::Moving::MOVE_TIME::[else]}
@@ -269,8 +278,7 @@ Q_STATE_DEF(Motor, Stopped) {
         //${AOs::Motor::SM::MotionReady::Stopped}
         case Q_ENTRY_SIG: {
             if ( m_moving ) {
-                consoleDisplayArgs("Motor: stopped, position: %d;\r\n", m_position);
-
+            //  SendMotorStoppedMessage();
                 if ( m_error == ERROR_NONE ) {
                     SendMotionDoneEvent();
                 }
@@ -301,29 +309,40 @@ Q_STATE_DEF(Motor, Stopped) {
                 m_findingLimit = 1;
             }
 
-            consoleDisplayArgs("Motor: requested position: %d, position: %d;\r\n",
-                newPosition, m_position);
+            //consoleDisplayArgs("Motor: requested position: %d, position: %d;\r\n",
+            //    newPosition, m_position);
             //${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[AtPositionOrAtLimit]}
             if (AtDestination() || (m_increment < 0 && m_atLimitSwitch)) {
                 if ( m_atLimitSwitch )
                 {
-                    consoleDisplay("Motor: no move, at limit switch;\r\n");
+                    //consoleDisplay("Motor: no move, at limit switch;\r\n");
                 }
                 else
                 {
-                    consoleDisplay("Motor: no move, already at position;\r\n");
+                    //consoleDisplay("Motor: no move, already at position;\r\n");
                 }
+
+                SendMotionDoneEvent();
                 status_ = tran(&Stopped);
             }
             //${AOs::Motor::SM::MotionReady::Stopped::MOVE, FIND_LIMIT::[NewPosition]}
             else if (!AtDestination()) {
-                consoleDisplayArgs("Motor: moving, increment: %d;\r\n", m_increment);
+                //consoleDisplayArgs("Motor: moving, increment: %d;\r\n", m_increment);
                 m_measure.Start();
                 status_ = tran(&Moving);
             }
             else {
                 status_ = Q_RET_UNHANDLED;
             }
+            break;
+        }
+        //${AOs::Motor::SM::MotionReady::Stopped::OFF}
+        case OFF_SIG: {
+            // Disable motor.
+            BSP_enableMotor(0);
+            // Send command completion message
+            consoleDisplay("OK;\r\n");
+            status_ = Q_RET_HANDLED;
             break;
         }
         default: {

@@ -199,20 +199,35 @@ uint8_t BSP_readSwitch(void)
     return s_buttonState;
 }
 
+void BSP_enableMotor( uint8_t on )
+{
+    s_stepper.setEnable(on);
+}
+
 void BSP_initMotor()
 {
     s_stepper.setSpeed(s_motorSpeed);
     s_motorPosition = 0;
 }
 
-int32_t BSP_getMotorStepDelay(void)
+uint64_t BSP_getMotorStepDelay(void)
 {
     return s_stepper.getStepDelay();
+}
+
+uint16_t BSP_getMotorStepsPerRev(void)
+{
+    return s_stepper.getStepsPerRev();
 }
 
 int16_t BSP_getMotorPosition(void)
 {
     return s_motorPosition;
+}
+
+uint16_t BSP_getMotorSpeed(void)
+{
+    return s_stepper.getSpeed();
 }
 
 uint8_t BSP_getMotorMoving(void)

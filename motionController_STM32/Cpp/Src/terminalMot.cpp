@@ -110,7 +110,7 @@ void TerminalMot::DispatchCommand(char command) {
         case 'F':
             pe = Q_NEW(MoveEvt, FIND_LIMIT_SIG);
             pe->position = -4000;
-            AO_Motor->POST(pe, this);
+            AO_MotionMgr->POST(pe, this);
             break;
         case 'h':
         case 'H':
@@ -122,7 +122,7 @@ void TerminalMot::DispatchCommand(char command) {
             pe = Q_NEW(MoveEvt, MOVE_SIG);
             //pe->position = 1000;
             pe->position = ExtractNumber(m_input);
-            AO_Motor->POST(pe, this);
+            AO_MotionMgr->POST(pe, this);
             break;
         case 'k':
         case 'K':
@@ -138,16 +138,21 @@ void TerminalMot::DispatchCommand(char command) {
             ke->position = m_knobPosition;
             AO_Knob->POST(ke, this);
             break;
+        case 'o':
+        case 'O':
+            pe = Q_NEW(MoveEvt, OFF_SIG);
+            AO_Motor->POST(pe, this);
+            break;
         case 's':
         case 'S':
             pe = Q_NEW(MoveEvt, STOP_SIG);
-            AO_Motor->POST(pe, this);
+            AO_MotionMgr->POST(pe, this);
             break;
         case 'u':
         case 'U':
             consoleDisplayArgs("%s: motor: %d, knob: %d, err: %d;\r\n",
                 m_name, m_motorPosition, m_knobPosition, m_error );
-    #if 1
+    #if 0
             pe = Q_NEW(MoveEvt, SHOW_STATE_SIG);
             QP::QActive::PUBLISH(pe, this);
     #else
@@ -156,16 +161,16 @@ void TerminalMot::DispatchCommand(char command) {
     #endif
             break;
         case '+':
-            m_motorPosition += 1024;
+            m_motorPosition += 1000;
             pe = Q_NEW(MoveEvt, MOVE_SIG);
             pe->position = m_motorPosition;
-            AO_Motor->POST(pe, this);
+            AO_MotionMgr->POST(pe, this);
             break;
         case '-':
-            m_motorPosition -= 1024;
+            m_motorPosition -= 1000;
             pe = Q_NEW(MoveEvt, MOVE_SIG);
             pe->position = m_motorPosition;
-            AO_Motor->POST(pe, this);
+            AO_MotionMgr->POST(pe, this);
             break;
     }
 }

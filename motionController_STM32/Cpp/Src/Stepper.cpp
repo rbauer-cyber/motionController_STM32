@@ -176,15 +176,44 @@ Stepper::Stepper(int number_of_steps, EAnalogPin motor_pin_1, EAnalogPin motor_p
   this->pin_count = 5;
 }
 
+void Stepper::setEnable( bool on )
+{
+	if ( !on )
+	{
+		CDigitalOut::Write(motor_pin_1, LOW);
+		CDigitalOut::Write(motor_pin_2, LOW);
+		CDigitalOut::Write(motor_pin_3, LOW);
+		CDigitalOut::Write(motor_pin_4, LOW);
+	}
+	else
+	{
+		CDigitalOut::Write(motor_pin_1, HIGH);
+		CDigitalOut::Write(motor_pin_2, LOW);
+		CDigitalOut::Write(motor_pin_3, HIGH);
+		CDigitalOut::Write(motor_pin_4, LOW);
+	}
+}
+
 /*
  * Sets the speed in revs per minute
  */
-void Stepper::setSpeed(long whatSpeed)
+void Stepper::setSpeed(uint16_t whatSpeed)
 {
-  this->step_delay = 60L * 1000L * 1000L / this->number_of_steps / whatSpeed;
+	this->speed = whatSpeed;
+	this->step_delay = 60UL * 1000UL * 1000UL / this->number_of_steps / whatSpeed;
 }
 
-uint32_t Stepper::getStepDelay()
+uint16_t Stepper::getSpeed()
+{
+    return this->speed;
+}
+
+uint16_t Stepper::getStepsPerRev(void)
+{
+	return this->number_of_steps;
+}
+
+uint64_t Stepper::getStepDelay()
 {
     return this->step_delay;
 }
@@ -204,9 +233,9 @@ void Stepper::step(int steps_to_move)
   // decrement the number of steps, moving one step each time:
   while (steps_left > 0)
   {
-    unsigned long now = getMicros();
+    uint64_t now = getMicros();
     // move only if the appropriate delay has passed:
-    if (now - this->last_step_time >= this->step_delay)
+    if ((now - this->last_step_time) >= this->step_delay)
     {
       // get the timeStamp of when you stepped:
       this->last_step_time = now;
@@ -215,7 +244,7 @@ void Stepper::step(int steps_to_move)
       if (this->direction == 1)
       {
         this->step_number++;
-        if (this->step_number == this->number_of_steps) {
+        if (uint32_t(this->step_number) == this->number_of_steps) {
           this->step_number = 0;
         }
       }

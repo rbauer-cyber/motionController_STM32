@@ -17,12 +17,15 @@ void BSP_initKnob();
 void BSP_initSwitch();
 void BSP_setPositionKnob(int8_t position);
 void BSP_ToggleLed(uint8_t index);
+void BSP_enableMotor( uint8_t on );
 uint8_t BSP_readKnob(void);
 uint8_t BSP_readSwitch(void);
 int16_t BSP_getMotorPosition(void);
+uint16_t BSP_getMotorSpeed(void);
+uint16_t BSP_getMotorStepsPerRev(void);
 int16_t BSP_MoveMotor(int16_t increment);
 uint8_t BSP_getMotorMoving(void);
-int32_t BSP_getMotorStepDelay(void);
+uint64_t BSP_getMotorStepDelay(void);
 
 #ifdef __cplusplus
 }

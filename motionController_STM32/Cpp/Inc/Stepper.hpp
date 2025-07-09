@@ -93,9 +93,13 @@ class Stepper {
                                  EAnalogPin motor_pin_3, EAnalogPin motor_pin_4,
                                  EAnalogPin motor_pin_5);
 
+    void setEnable( bool on );
+
     // speed setter method:
-    void setSpeed(long whatSpeed);
-    uint32_t getStepDelay();
+    void setSpeed(uint16_t whatSpeed);
+    uint16_t getSpeed();
+    uint16_t getStepsPerRev();
+    uint64_t getStepDelay();
 
     // mover method:
     void step(int number_of_steps);
@@ -105,11 +109,12 @@ class Stepper {
   private:
     void stepMotor(int this_step);
 
-    int direction;            // Direction of rotation
-    unsigned long step_delay; // delay between steps, in ms, based on speed
-    int number_of_steps;      // total number of steps this motor can take
-    int pin_count;            // how many pins are in use.
-    int step_number;          // which step the motor is on
+    int direction;				// Direction of rotation
+    uint64_t step_delay;		// delay between steps, in ms, based on speed
+    uint16_t number_of_steps;   // total number of steps this motor can take
+    uint16_t speed;
+    int pin_count;				// how many pins are in use.
+    int step_number;			// which step the motor is on
 
     // motor pin numbers:
     EAnalogPin motor_pin_1;
@@ -118,7 +123,7 @@ class Stepper {
     EAnalogPin motor_pin_4;
     EAnalogPin motor_pin_5;          // Only 5 phase motor
 
-    unsigned long last_step_time; // time stamp in us of when the last step was taken
+    uint64_t last_step_time; // time stamp in us of when the last step was taken
 };
 
 #endif

@@ -88,6 +88,8 @@ public:
 private:
     void PublishPositionEvent();
     bool AtDestination();
+    void SendMotorStoppedMessage();
+    void SendMotorPositionMessage();
 
 protected:
     Q_STATE_DECL(initial);

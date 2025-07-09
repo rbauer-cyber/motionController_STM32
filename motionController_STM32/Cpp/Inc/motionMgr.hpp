@@ -59,6 +59,10 @@ public:
 private:
     QP::QTimeEvt m_timeEvt;
 
+public:
+    std::uint8_t m_error;
+    std::uint8_t m_findingLimit;
+
 private:
     void SendMoveEvent(uint16_t position);
     void SendFindLimitEvent();
@@ -74,6 +78,12 @@ private:
 
 public:
     void MoveHome();
+    void MoveToPosition(std::uint16_t position);
+    void FindLimit(std::uint16_t position);
+
+private:
+    void SendStopEvent();
+    void ReceiveSyncEvt(QP::QEvt const * e);
 
 protected:
     Q_STATE_DECL(initial);

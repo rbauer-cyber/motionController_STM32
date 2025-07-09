@@ -59,6 +59,7 @@ enum MotSignals : QP::QSignal {
     HOME_SIG,
     MOVED_SIG,
     STOP_SIG,
+    OFF_SIG,
     MOVE_ERROR_SIG,
     KNOB_SIG,
     SWITCH_CHANGED_SIG,
