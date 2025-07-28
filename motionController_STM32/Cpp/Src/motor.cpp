@@ -153,6 +153,13 @@ void Motor::SendMotorPositionMessage() {
         m_position, m_moving, m_atLimitSwitch);
 }
 
+//${AOs::Motor::SendOffEvent} ................................................
+void Motor::SendOffEvent(uint16_t position) {
+    // Request new motor postiion
+    MoveEvt *myEvt = Q_NEW(MoveEvt, OFF_SIG);
+    m_AO_Client->POST(myEvt, this);
+}
+
 //${AOs::Motor::SM} ..........................................................
 Q_STATE_DEF(Motor, initial) {
     //${AOs::Motor::SM::initial}
@@ -278,7 +285,6 @@ Q_STATE_DEF(Motor, Stopped) {
         //${AOs::Motor::SM::MotionReady::Stopped}
         case Q_ENTRY_SIG: {
             if ( m_moving ) {
-            //  SendMotorStoppedMessage();
                 if ( m_error == ERROR_NONE ) {
                     SendMotionDoneEvent();
                 }
@@ -341,7 +347,7 @@ Q_STATE_DEF(Motor, Stopped) {
             // Disable motor.
             BSP_enableMotor(0);
             // Send command completion message
-            consoleDisplay("OK;\r\n");
+            SendMotionDoneEvent();
             status_ = Q_RET_HANDLED;
             break;
         }

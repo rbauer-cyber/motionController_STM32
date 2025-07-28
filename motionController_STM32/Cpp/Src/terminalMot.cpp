@@ -141,7 +141,7 @@ void TerminalMot::DispatchCommand(char command) {
         case 'o':
         case 'O':
             pe = Q_NEW(MoveEvt, OFF_SIG);
-            AO_Motor->POST(pe, this);
+            AO_MotionMgr->POST(pe, this);
             break;
         case 's':
         case 'S':

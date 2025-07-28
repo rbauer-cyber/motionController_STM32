@@ -84,6 +84,11 @@ public:
 private:
     void SendStopEvent();
     void ReceiveSyncEvt(QP::QEvt const * e);
+    void SendOffEvent();
+    void ReceiveIllegalEvt(QP::QEvt const * e);
+
+public:
+    void TurnMotorOff();
 
 protected:
     Q_STATE_DECL(initial);

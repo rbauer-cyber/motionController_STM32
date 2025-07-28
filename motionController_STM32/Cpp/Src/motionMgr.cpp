@@ -142,7 +142,7 @@ void MotionMgr::ReceiveMotorErrorEvt(QP::QEvt const * e) {
                         m_name, error, position );
 
     // Send command error message
-    consoleDisplay("ERROR;\r\n");
+    consoleDisplay("ERR;\r\n");
 }
 
 //${AOs::MotionMgr::MoveHome} ................................................
@@ -206,8 +206,28 @@ void MotionMgr::ReceiveSyncEvt(QP::QEvt const * e) {
     motorEvt->error = m_error;
     QP::QActive::PUBLISH(motorEvt, this);
 
-    // Send command error message
+    // Send command completion message
     consoleDisplay("OK;\r\n");
+}
+
+//${AOs::MotionMgr::SendOffEvent} ............................................
+void MotionMgr::SendOffEvent() {
+    // Request motor stop
+    MoveEvt *myEvt = Q_NEW(MoveEvt, OFF_SIG);
+    m_AO_Client->POST(myEvt, this);
+}
+
+//${AOs::MotionMgr::ReceiveIllegalEvt} .......................................
+void MotionMgr::ReceiveIllegalEvt(QP::QEvt const * e) {
+    consoleDisplayArgs("%s: error: illegal command %d when moving;\r\n",
+        m_name, e->sig);
+    // Send command error message
+    consoleDisplay("ERR;\r\n");
+}
+
+//${AOs::MotionMgr::TurnMotorOff} ............................................
+void MotionMgr::TurnMotorOff() {
+    SendOffEvent();
 }
 
 //${AOs::MotionMgr::SM} ......................................................
@@ -286,8 +306,12 @@ Q_STATE_DEF(MotionMgr, idle) {
                 consoleDisplayArgs("%s: moving motor;\r\n", m_name);
                 MoveToPosition(newPosition);
             }
-
-
+            status_ = tran(&moving);
+            break;
+        }
+        //${AOs::MotionMgr::SM::idle::OFF}
+        case OFF_SIG: {
+            TurnMotorOff()
             status_ = tran(&moving);
             break;
         }

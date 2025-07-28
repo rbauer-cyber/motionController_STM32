@@ -90,6 +90,7 @@ private:
     bool AtDestination();
     void SendMotorStoppedMessage();
     void SendMotorPositionMessage();
+    void SendOffEvent(uint16_t position);
 
 protected:
     Q_STATE_DECL(initial);

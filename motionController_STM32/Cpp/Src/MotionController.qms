@@ -10,19 +10,19 @@
  </group>
  <group name="windows">
   <item id="AOs::Switch::SM">-94,0,881,688</item>
-  <item id="AOs::MotionMgr::SM">0,38,787,663</item>
+  <item id="AOs::MotionMgr::SM">0,0,744,669,*</item>
   <item id="AOs::Knob::SM">0,0,685,621</item>
   <item id="AOs::Motor::SM">0,18,809,683</item>
-  <item id="BaseAOs::Terminal::SM">0,0,787,669,*</item>
+  <item id="BaseAOs::Terminal::SM">0,0,787,669</item>
   <item id=".::bsp.cpp">102,80,685,621</item>
   <item id=".::../Inc::switch.hpp">24,0,763,663</item>
   <item id=".::switch.cpp">0,401,596,300</item>
   <item id=".::terminalMot.cpp">191,0,596,300</item>
-  <item id=".::../Inc::motor.hpp">0,0,596,300</item>
+  <item id=".::../Inc::motor.hpp">191,401,596,300</item>
  </group>
  <group name="search">
   <item name="options">2032128</item>
-  <item name="replace">1</item>
+  <item name="replace">0</item>
  </group>
  <group name="vars"/>
  <group name="tools">

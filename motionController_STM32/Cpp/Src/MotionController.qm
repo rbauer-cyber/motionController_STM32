@@ -320,6 +320,14 @@ QP::QActive::PUBLISH(myEvt, this);</code>
     <code>consoleDisplayArgs(&quot;Motor: position: %d, moving: %d, limit: %d;\r\n&quot;,
     m_position, m_moving, m_atLimitSwitch);</code>
    </operation>
+   <!--${AOs::Motor::SendOffEvent}-->
+   <operation name="SendOffEvent" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::Motor::SendOffEvent::position}-->
+    <parameter name="position" type="uint16_t"/>
+    <code>// Request new motor postiion
+MoveEvt *myEvt = Q_NEW(MoveEvt, OFF_SIG);
+m_AO_Client-&gt;POST(myEvt, this);</code>
+   </operation>
    <!--${AOs::Motor::SM}-->
    <statechart properties="0x01">
     <documentation>Motor state machine</documentation>
@@ -438,7 +446,6 @@ else {
      <!--${AOs::Motor::SM::MotionReady::Stopped}-->
      <state name="Stopped">
       <entry brief="Notify Client">if ( m_moving ) {
-//  SendMotorStoppedMessage();
     if ( m_error == ERROR_NONE ) {
         SendMotionDoneEvent();
     }
@@ -502,7 +509,7 @@ m_measure.Start();</action>
        <action>// Disable motor.
 BSP_enableMotor(0);
 // Send command completion message
-consoleDisplay(&quot;OK;\r\n&quot;);</action>
+SendMotionDoneEvent();</action>
        <tran_glyph conn="57,24,1,-1,-9">
         <action box="-7,-2,6,2"/>
        </tran_glyph>
@@ -621,7 +628,7 @@ consoleDisplayArgs(&quot;%s: motor error: %d, position: %d;\r\n&quot;,
                     m_name, error, position );
 
 // Send command error message
-consoleDisplay(&quot;ERROR;\r\n&quot;);</code>
+consoleDisplay(&quot;ERR;\r\n&quot;);</code>
    </operation>
    <!--${AOs::MotionMgr::MoveHome}-->
    <operation name="MoveHome" type="void" visibility="0x00" properties="0x00">
@@ -686,8 +693,27 @@ motorEvt-&gt;device = AO_KNOB;
 motorEvt-&gt;error = m_error;
 QP::QActive::PUBLISH(motorEvt, this);
 
-// Send command error message
+// Send command completion message
 consoleDisplay(&quot;OK;\r\n&quot;);</code>
+   </operation>
+   <!--${AOs::MotionMgr::SendOffEvent}-->
+   <operation name="SendOffEvent" type="void" visibility="0x02" properties="0x00">
+    <code>// Request motor stop
+MoveEvt *myEvt = Q_NEW(MoveEvt, OFF_SIG);
+m_AO_Client-&gt;POST(myEvt, this);</code>
+   </operation>
+   <!--${AOs::MotionMgr::ReceiveIllegalEvt}-->
+   <operation name="ReceiveIllegalEvt" type="void" visibility="0x02" properties="0x00">
+    <!--${AOs::MotionMgr::ReceiveIllegalEv~::e}-->
+    <parameter name="e" type="QP::QEvt const *"/>
+    <code>consoleDisplayArgs(&quot;%s: error: illegal command %d when moving;\r\n&quot;,
+    m_name, e-&gt;sig);
+// Send command error message
+consoleDisplay(&quot;ERR;\r\n&quot;);</code>
+   </operation>
+   <!--${AOs::MotionMgr::TurnMotorOff}-->
+   <operation name="TurnMotorOff" type="void" visibility="0x00" properties="0x00">
+    <code>SendOffEvent();</code>
    </operation>
    <!--${AOs::MotionMgr::SM}-->
    <statechart properties="0x01">
@@ -743,7 +769,7 @@ ReceiveSyncEvt(e);</action>
      <tran trig="STOP">
       <action>// Motor already stopped
 consoleDisplay(&quot;OK;\r\n&quot;);</action>
-      <tran_glyph color="1" conn="59,19,1,-1,-12">
+      <tran_glyph color="1" conn="64,19,1,-1,-17">
        <action box="-10,1,9,2"/>
       </tran_glyph>
      </tran>
@@ -764,14 +790,19 @@ else
 {
     consoleDisplayArgs(&quot;%s: moving motor;\r\n&quot;, m_name);
     MoveToPosition(newPosition);
-}
-
-</action>
+}</action>
       <tran_glyph color="1" conn="28,25,2,0,15">
        <action box="0,2,10,5"/>
       </tran_glyph>
      </tran>
-     <state_glyph node="6,12,53,13">
+     <!--${AOs::MotionMgr::SM::idle::OFF}-->
+     <tran trig="OFF" target="../../2">
+      <action brief="Motor Off">TurnMotorOff()</action>
+      <tran_glyph color="1" conn="46,25,2,0,15">
+       <action box="-4,3,8,5"/>
+      </tran_glyph>
+     </tran>
+     <state_glyph node="6,12,58,13">
       <entry box="0,3,6,2"/>
      </state_glyph>
     </state>
@@ -781,16 +812,16 @@ else
      <tran trig="MOVED" target="../../1">
       <action brief="Update Position">// Received moved event from motor
 ReceiveMotorMovedEvt(e);</action>
-      <tran_glyph color="1" conn="48,40,0,2,-15">
-       <action box="-6,-11,9,2"/>
+      <tran_glyph color="1" conn="54,40,0,2,-15">
+       <action box="-6,-7,9,2"/>
       </tran_glyph>
      </tran>
      <!--${AOs::MotionMgr::SM::moving::MOVE_ERROR}-->
      <tran trig="MOVE_ERROR" target="../../1">
       <action>// Received error event from motor
 ReceiveMotorErrorEvt(e);</action>
-      <tran_glyph conn="54,40,0,2,-15">
-       <action box="-4,-6,13,2"/>
+      <tran_glyph conn="60,40,0,2,-15">
+       <action box="-5,-10,13,2"/>
       </tran_glyph>
      </tran>
      <!--${AOs::MotionMgr::SM::moving::STOP}-->
@@ -800,7 +831,7 @@ ReceiveMotorErrorEvt(e);</action>
        <action box="2,-2,10,7"/>
       </tran_glyph>
      </tran>
-     <state_glyph color="2" node="6,40,52,13"/>
+     <state_glyph color="2" node="6,40,58,13"/>
     </state>
     <state_diagram size="73,61"/>
    </statechart>
@@ -1181,7 +1212,7 @@ switch ( command ) {
     case 'o':
     case 'O':
         pe = Q_NEW(MoveEvt, OFF_SIG);
-        AO_Motor-&gt;POST(pe, this);
+        AO_MotionMgr-&gt;POST(pe, this);
         break;
     case 's':
     case 'S':
