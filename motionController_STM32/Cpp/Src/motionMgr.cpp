@@ -311,7 +311,7 @@ Q_STATE_DEF(MotionMgr, idle) {
         }
         //${AOs::MotionMgr::SM::idle::OFF}
         case OFF_SIG: {
-            TurnMotorOff()
+            TurnMotorOff();
             status_ = tran(&moving);
             break;
         }

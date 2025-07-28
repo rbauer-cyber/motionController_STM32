@@ -797,7 +797,7 @@ else
      </tran>
      <!--${AOs::MotionMgr::SM::idle::OFF}-->
      <tran trig="OFF" target="../../2">
-      <action brief="Motor Off">TurnMotorOff()</action>
+      <action brief="Motor Off">TurnMotorOff();</action>
       <tran_glyph color="1" conn="46,25,2,0,15">
        <action box="-4,3,8,5"/>
       </tran_glyph>
